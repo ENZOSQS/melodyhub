@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "316719078092",
+    "project_id": "melodyhub-4fad1",
+    "storage_bucket": "melodyhub-4fad1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:316719078092:android:572426b49e09b2d77dc069",
+        "android_client_info": {
+          "package_name": "com.example.melodyhub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAxwlaraXaiFg6ikAq0sAn0IpSv5-h95g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
