@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
+import 'screens/login_page.dart';
+import 'screens/home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const MelodyHubApp());
 }
@@ -24,40 +28,33 @@ class MelodyHubApp extends StatelessWidget {
         brightness: Brightness.dark,
         primarySwatch: Colors.deepPurple,
       ),
-      home: const HomePage(),
+      home: const AuthGate(),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Melody Hub'), centerTitle: true),
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
 
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            print('Botão clicado');
+        if (snapshot.hasData) {
+          return const HomePage();
+        }
 
-            try {
-              await FirebaseFirestore.instance.collection('usuarios').add({
-                'nome': 'Enzo',
-                'xp': 100,
-                'nivel': 1,
-              });
-
-              print('Dados enviados com sucesso!');
-            } catch (e) {
-              print('ERRO AO ENVIAR: $e');
-            }
-          },
-
-          child: const Text('Enviar Dados'),
-        ),
-      ),
+        return const LoginPage();
+      },
     );
   }
 }
