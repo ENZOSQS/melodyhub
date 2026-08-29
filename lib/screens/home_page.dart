@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'keyboard_screen.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -75,6 +76,7 @@ class HomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+
                 // Saudação
                 Text(
                   'Olá, $nome! 👋',
@@ -107,6 +109,7 @@ class HomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+
                       const Text(
                         'Seu progresso',
                         style: TextStyle(
@@ -120,6 +123,7 @@ class HomePage extends StatelessWidget {
 
                       Row(
                         children: [
+
                           Expanded(
                             child: _InfoCard(
                               icon: Icons.star,
@@ -137,6 +141,7 @@ class HomePage extends StatelessWidget {
                               valor: '$nivel',
                             ),
                           ),
+
                         ],
                       ),
                     ],
@@ -145,7 +150,7 @@ class HomePage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Card de estudo
+                // Módulo 2 — Simulador de teclado
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
@@ -155,8 +160,9 @@ class HomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+
                       const Icon(
-                        Icons.music_note,
+                        Icons.piano,
                         color: Color(0xFF0B1736),
                         size: 40,
                       ),
@@ -164,7 +170,7 @@ class HomePage extends StatelessWidget {
                       const SizedBox(height: 12),
 
                       const Text(
-                        'Comece a estudar',
+                        'Simulador de teclado',
                         style: TextStyle(
                           color: Color(0xFF0B1736),
                           fontSize: 22,
@@ -175,7 +181,7 @@ class HomePage extends StatelessWidget {
                       const SizedBox(height: 6),
 
                       const Text(
-                        'Explore exercícios e desenvolva sua percepção musical.',
+                        'Pratique as notas musicais usando o teclado virtual.',
                         style: TextStyle(
                           color: Color(0xFF0B1736),
                           fontSize: 15,
@@ -188,11 +194,11 @@ class HomePage extends StatelessWidget {
                         height: 48,
                         child: ElevatedButton(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Os exercícios estarão disponíveis no próximo módulo.',
-                                ),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const KeyboardScreen(),
                               ),
                             );
                           },
@@ -205,7 +211,7 @@ class HomePage extends StatelessWidget {
                             ),
                           ),
                           child: const Text(
-                            'EXPLORAR',
+                            'ABRIR TECLADO',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                             ),
@@ -228,6 +234,7 @@ class HomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+
                       const Text(
                         'Acesso rápido',
                         style: TextStyle(
@@ -303,6 +310,7 @@ class _InfoCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+
           Icon(
             icon,
             color: const Color(0xFF16D9C5),

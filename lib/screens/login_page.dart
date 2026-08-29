@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'register_page.dart';
+import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -52,6 +53,16 @@ class _LoginPageState extends State<LoginPage> {
       print('UID: ${credencial.user?.uid}');
 
       if (!mounted) return;
+
+      // Depois do login, vai para a Home.
+      // O pushReplacement impede voltar para o Login
+      // usando o botão voltar.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomePage(),
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       String mensagem = 'Não foi possível fazer login.';
 
@@ -68,7 +79,9 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensagem)),
+        SnackBar(
+          content: Text(mensagem),
+        ),
       );
 
       print('Erro Firebase Auth: ${e.code}');
@@ -104,19 +117,24 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0B1736),
+
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
+
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: 430,
               ),
+
               child: Container(
                 padding: const EdgeInsets.all(28),
+
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(28),
+
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.25),
@@ -125,17 +143,22 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                 ),
+
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+
+                    // LOGO
                     Center(
                       child: Container(
                         height: 75,
                         width: 75,
+
                         decoration: BoxDecoration(
                           color: const Color(0xFF0B1736),
                           borderRadius: BorderRadius.circular(22),
                         ),
+
                         child: const Icon(
                           Icons.music_note,
                           color: Color(0xFF16D9C5),
@@ -146,9 +169,11 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 20),
 
+                    // NOME
                     const Text(
                       'Melody Hub',
                       textAlign: TextAlign.center,
+
                       style: TextStyle(
                         color: Color(0xFF0B1736),
                         fontSize: 30,
@@ -161,6 +186,7 @@ class _LoginPageState extends State<LoginPage> {
                     const Text(
                       'Aprenda música de um jeito mais divertido.',
                       textAlign: TextAlign.center,
+
                       style: TextStyle(
                         color: Colors.black54,
                         fontSize: 15,
@@ -169,8 +195,10 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 30),
 
+                    // TÍTULO
                     const Text(
                       'Bem-vindo de volta!',
+
                       style: TextStyle(
                         color: Color(0xFF0B1736),
                         fontSize: 22,
@@ -180,20 +208,26 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 20),
 
+                    // E-MAIL
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
+
                       style: const TextStyle(
                         color: Color(0xFF0B1736),
                       ),
+
                       decoration: InputDecoration(
                         labelText: 'E-mail',
+
                         prefixIcon: const Icon(
                           Icons.email_outlined,
                           color: Color(0xFF0B1736),
                         ),
+
                         filled: true,
                         fillColor: const Color(0xFFF4F6FA),
+
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -203,33 +237,42 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 16),
 
+                    // SENHA
                     TextField(
                       controller: senhaController,
                       obscureText: !mostrarSenha,
+
                       style: const TextStyle(
                         color: Color(0xFF0B1736),
                       ),
+
                       decoration: InputDecoration(
                         labelText: 'Senha',
+
                         prefixIcon: const Icon(
                           Icons.lock_outline,
                           color: Color(0xFF0B1736),
                         ),
+
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
                               mostrarSenha = !mostrarSenha;
                             });
                           },
+
                           icon: Icon(
                             mostrarSenha
                                 ? Icons.visibility_off
                                 : Icons.visibility,
+
                             color: Colors.black54,
                           ),
                         ),
+
                         filled: true,
                         fillColor: const Color(0xFFF4F6FA),
+
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -239,28 +282,37 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 24),
 
+                    // BOTÃO ENTRAR
                     SizedBox(
                       height: 54,
+
                       child: ElevatedButton(
-                        onPressed: carregando ? null : fazerLogin,
+                        onPressed: carregando
+                            ? null
+                            : fazerLogin,
+
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF16D9C5),
                           foregroundColor: const Color(0xFF0B1736),
                           elevation: 0,
+
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
+
                         child: carregando
                             ? const SizedBox(
                                 height: 22,
                                 width: 22,
+
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
                               )
                             : const Text(
                                 'ENTRAR',
+
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -271,6 +323,7 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 18),
 
+                    // DIVISOR
                     Row(
                       children: [
                         Expanded(
@@ -278,15 +331,21 @@ class _LoginPageState extends State<LoginPage> {
                             color: Colors.grey.shade300,
                           ),
                         ),
+
                         const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                          ),
+
                           child: Text(
                             'ou',
+
                             style: TextStyle(
                               color: Colors.black45,
                             ),
                           ),
                         ),
+
                         Expanded(
                           child: Divider(
                             color: Colors.grey.shade300,
@@ -297,10 +356,13 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 14),
 
+                    // CADASTRO
                     TextButton(
                       onPressed: abrirCadastro,
+
                       child: const Text(
                         'Não tem uma conta? Cadastre-se',
+
                         style: TextStyle(
                           color: Color(0xFF0B1736),
                           fontWeight: FontWeight.bold,
