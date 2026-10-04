@@ -238,62 +238,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
-  flutter_midi_command:
-    dependency: "direct main"
-    description:
-      name: flutter_midi_command
-      sha256: "3bca948b6a36aca3233ae4899a77cc31b344638fa36d589669c22fd0e46df57d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.2"
-  flutter_midi_command_android:
-    dependency: transitive
-    description:
-      name: flutter_midi_command_android
-      sha256: "7a1cd334fdd42054e47f63605228215282ff04f918eee4532772a2677238b50c"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.3"
-  flutter_midi_command_darwin:
-    dependency: transitive
-    description:
-      name: flutter_midi_command_darwin
-      sha256: "1715869fba5f70aecb313aa14dfe9c2308acd68ae541a8db15f8ba9210fa49f5"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.2"
-  flutter_midi_command_linux:
-    dependency: transitive
-    description:
-      name: flutter_midi_command_linux
-      sha256: "7863c45340ebcd18bade725dfb1ec1d469dea7b36b750d38f09112868ed0d039"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.2"
-  flutter_midi_command_platform_interface:
-    dependency: transitive
-    description:
-      name: flutter_midi_command_platform_interface
-      sha256: "30118785b7fabe925200c0f58847fd8ad2cf13eee80e96602b0edd9521e3cf0f"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.2"
-  flutter_midi_command_web:
-    dependency: transitive
-    description:
-      name: flutter_midi_command_web
-      sha256: "56b5ac3e927a0b0e231201f296913bf9fd611f29e7f9afae9c9fd08e9372d2d8"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.2"
-  flutter_midi_command_windows:
-    dependency: transitive
-    description:
-      name: flutter_midi_command_windows
-      sha256: "8ce07e6bfdda5071f4dfd14d01e9c4fe9ade0eaf9b5f10e46298023999ac7e80"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.1"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -549,14 +493,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-  win32:
-    dependency: transitive
-    description:
-      name: win32
-      sha256: d7cb55e04cd34096cd3a79b3330245f54cb96a370a1c27adb3c84b917de8b08e
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.15.0"
   xdg_directories:
     dependency: transitive
     description:
