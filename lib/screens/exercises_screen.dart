@@ -1,3 +1,5 @@
+// lib/screens/exercises_screen.dart
+
 import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -6,687 +8,375 @@ import 'package:flutter/material.dart';
 import '../services/progress_service.dart';
 
 class ExercisesScreen extends StatefulWidget {
-  const ExercisesScreen({
-    super.key,
-  });
+  const ExercisesScreen({super.key});
 
   @override
-  State<ExercisesScreen>
-      createState() =>
-          _ExercisesScreenState();
+  State<ExercisesScreen> createState() => _ExercisesScreenState();
 }
 
-class _ExercisesScreenState
-    extends State<ExercisesScreen> {
-  final AudioPlayer _player =
-      AudioPlayer();
+class _ExercisesScreenState extends State<ExercisesScreen>
+    with WidgetsBindingObserver {
+  static const Color verde = Color(0xFF16D9C5);
+  static const Color preto = Color(0xFF0B1736);
 
-  final Random _random =
-      Random();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
-  final ProgressService
-      _progressService =
-      ProgressService();
+  final ProgressService _progressService = ProgressService();
 
-  final List<Map<String, String>>
-      _notas = [
-    {
-      'nome': 'Dó',
-      'arquivo': 'C3.wav',
-    },
-    {
-      'nome': 'Ré',
-      'arquivo': 'D3.wav',
-    },
-    {
-      'nome': 'Mi',
-      'arquivo': 'E3.wav',
-    },
-    {
-      'nome': 'Fá',
-      'arquivo': 'F3.wav',
-    },
-    {
-      'nome': 'Sol',
-      'arquivo': 'G3.wav',
-    },
-    {
-      'nome': 'Lá',
-      'arquivo': 'A3.wav',
-    },
-    {
-      'nome': 'Si',
-      'arquivo': 'B3.wav',
-    },
-  ];
+  final Random _random = Random();
+  final Stopwatch _tempoQuestao = Stopwatch();
 
-  late Map<String, String>
-      _notaAtual;
+  bool _respondendo = false;
+  bool _mostrarFeedback = false;
+  bool? _acertou;
 
   String? _respostaSelecionada;
 
-  bool? _respostaCorreta;
+  late Map<String, String> _notaAtual;
 
-  bool _tocando = false;
-
-  bool _salvandoProgresso =
-      false;
+  final List<Map<String, String>> _notas = [
+    {'nome': 'Dó', 'arquivo': 'C3.wav'},
+    {'nome': 'Ré', 'arquivo': 'D3.wav'},
+    {'nome': 'Mi', 'arquivo': 'E3.wav'},
+    {'nome': 'Fá', 'arquivo': 'F3.wav'},
+    {'nome': 'Sol', 'arquivo': 'G3.wav'},
+    {'nome': 'Lá', 'arquivo': 'A3.wav'},
+    {'nome': 'Si', 'arquivo': 'B3.wav'},
+  ];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
-    _sortearNota();
+    _notaAtual = _sortearNota();
+    _tempoQuestao.start();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tocarNota();
+    });
   }
 
   @override
   void dispose() {
-    _player.dispose();
-
+    WidgetsBinding.instance.removeObserver(this);
+    _audioPlayer.dispose();
     super.dispose();
   }
 
-  void _sortearNota() {
-    _notaAtual =
-        _notas[
-          _random.nextInt(
-            _notas.length,
-          )
-        ];
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (!_respondendo) _tempoQuestao.start();
+    } else {
+      _tempoQuestao.stop();
+    }
+  }
 
-    _respostaSelecionada =
-        null;
-
-    _respostaCorreta =
-        null;
-
-    _tocando = false;
-
-    _tocarNota();
+  Map<String, String> _sortearNota() {
+    return _notas[_random.nextInt(_notas.length)];
   }
 
   Future<void> _tocarNota() async {
     try {
-      if (mounted) {
-        setState(() {
-          _tocando = true;
-        });
-      }
+      await _audioPlayer.stop();
 
-      await _player.stop();
-
-      await _player.play(
-        AssetSource(
-          'sounds/${_notaAtual['arquivo']}',
-        ),
-      );
-
-      await Future.delayed(
-        const Duration(
-          milliseconds: 900,
-        ),
-      );
-
-      if (mounted) {
-        setState(() {
-          _tocando = false;
-        });
-      }
+      await _audioPlayer.play(AssetSource('sounds/${_notaAtual['arquivo']}'));
     } catch (e) {
-      debugPrint(
-        'Erro ao reproduzir nota: $e',
-      );
-
-      if (mounted) {
-        setState(() {
-          _tocando = false;
-        });
-      }
+      debugPrint('Erro ao reproduzir áudio: $e');
     }
   }
 
-  Future<void> _verificarResposta(
-    String resposta,
-  ) async {
-    if (_respostaCorreta != null ||
-        _salvandoProgresso) {
+  Future<void> _responder(String resposta) async {
+    if (_respondendo) {
       return;
     }
 
-    final acertou =
-        resposta ==
-            _notaAtual['nome'];
+    final correta = resposta == _notaAtual['nome'];
+    _tempoQuestao.stop();
+    final duracaoSegundos = _tempoQuestao.elapsed.inSeconds;
 
     setState(() {
-      _respostaSelecionada =
-          resposta;
-
-      _respostaCorreta =
-          acertou;
-
-      _salvandoProgresso = true;
+      _respondendo = true;
+      _respostaSelecionada = resposta;
+      _acertou = correta;
+      _mostrarFeedback = true;
     });
 
     try {
-      await _progressService
-          .registrarExercicio(
-        acertou: acertou,
+      await _progressService.registrarExercicio(
+        acertou: correta,
+        tipo: 'Prático',
+        pergunta: 'Identifique a nota tocada.',
+        resposta: resposta,
+        respostaCorreta: _notaAtual['nome'],
+        duracaoSegundos: duracaoSegundos,
       );
-
-      if (mounted && acertou) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          const SnackBar(
-            content:
-                Text('+10 XP! 🎉'),
-            backgroundColor:
-                Color(0xFF35A85B),
-            duration:
-                Duration(
-              seconds: 1,
-            ),
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _respondendo = false;
+        _mostrarFeedback = false;
+        _acertou = null;
+        _respostaSelecionada = null;
+      });
+      _tempoQuestao
+        ..reset()
+        ..start();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível salvar seu exercício. Confira sua conexão e tente novamente.',
           ),
-        );
-      }
-    } catch (e) {
-      debugPrint(
-        'Erro ao salvar progresso: $e',
+        ),
       );
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível salvar o progresso.',
-            ),
-            backgroundColor:
-                Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _salvandoProgresso =
-              false;
-        });
-      }
+      return;
     }
-  }
 
-  void _proximaNota() {
-    if (_salvandoProgresso) {
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    if (!mounted) {
       return;
     }
 
     setState(() {
-      _sortearNota();
+      _notaAtual = _sortearNota();
+      _respondendo = false;
+      _mostrarFeedback = false;
+      _acertou = null;
+      _respostaSelecionada = null;
+      _tempoQuestao
+        ..reset()
+        ..start();
     });
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (mounted) {
+      await _tocarNota();
+    }
   }
 
-  Color _corTecla(
-    String nota,
-  ) {
-    if (_respostaCorreta ==
-        null) {
+  Color _corTecla(String nome) {
+    if (!_mostrarFeedback) {
       return Colors.white;
     }
 
-    if (nota ==
-        _respostaSelecionada) {
-      return _respostaCorreta!
-          ? const Color(
-              0xFF35A85B,
-            )
-          : const Color(
-              0xFFD94B4B,
-            );
+    if (nome == _notaAtual['nome']) {
+      return Colors.green;
     }
 
-    if (nota ==
-        _notaAtual['nome']) {
-      return const Color(
-        0xFF35A85B,
-      );
+    if (nome == _respostaSelecionada && _acertou == false) {
+      return Colors.red;
     }
 
     return Colors.white;
   }
 
-  Color _corTexto(
-    String nota,
-  ) {
-    if (_respostaCorreta ==
-        null) {
-      return Colors.black87;
+  Color _corTextoTecla(String nome) {
+    if (!_mostrarFeedback) {
+      return preto;
     }
 
-    if (nota ==
-        _respostaSelecionada) {
+    if (nome == _notaAtual['nome']) {
       return Colors.white;
     }
 
-    if (nota ==
-        _notaAtual['nome']) {
+    if (nome == _respostaSelecionada && _acertou == false) {
       return Colors.white;
     }
 
-    return Colors.black54;
+    return preto;
   }
 
-  Widget _buildTecla(
-    Map<String, String> nota,
-  ) {
-    final nome =
-        nota['nome']!;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: _respostaCorreta ==
-                    null &&
-                !_salvandoProgresso
-            ? () =>
-                _verificarResposta(
-                  nome,
-                )
-            : null,
-        child: Container(
-          margin:
-              const EdgeInsets.symmetric(
-            horizontal: 2,
-          ),
-          height: 240,
-          decoration:
-              BoxDecoration(
-            color:
-                _corTecla(nome),
-            borderRadius:
-                BorderRadius.circular(
-              8,
-            ),
-            border: Border.all(
-              color: Colors.black26,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 8,
-                offset:
-                    Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Align(
-            alignment:
-                Alignment.bottomCenter,
-            child: Padding(
-              padding:
-                  const EdgeInsets.only(
-                bottom: 18,
-              ),
-              child: Text(
-                nome,
-                style:
-                    TextStyle(
-                  color:
-                      _corTexto(
-                    nome,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: preto,
+      appBar: AppBar(
+        backgroundColor: preto,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Exercício Prático',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SafeArea(
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 14),
+                  child: Column(
+                    children: [
+                      _buildCabecalho(),
+                      const SizedBox(height: 12),
+                      _buildPiano(),
+                      const SizedBox(height: 12),
+                      _buildFeedback(),
+                    ],
                   ),
-                  fontSize: 17,
-                  fontWeight:
-                      FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildTeclado() {
-    return Row(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children:
-          _notas.map(
-        (nota) {
-          return _buildTecla(
-            nota,
-          );
-        },
-      ).toList(),
-    );
-  }
-
-  Widget _buildPlayer() {
+  Widget _buildCabecalho() {
     return Container(
-      padding:
-          const EdgeInsets.all(18),
-      decoration:
-          BoxDecoration(
-        color:
-            const Color(0xFF151515),
-        borderRadius:
-            BorderRadius.circular(
-          18,
-        ),
-        border: Border.all(
-          color: Colors.white10,
-        ),
+      width: double.infinity,
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.hearing,
-            color:
-                Color(0xFF35A85B),
-            size: 38,
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          Text(
-            _tocando
-                ? 'Reproduzindo...'
-                : 'Ouça a nota',
-            style:
-                const TextStyle(
-              color: Colors.white,
-              fontSize: 19,
-              fontWeight:
-                  FontWeight.bold,
-            ),
-          ),
-          const SizedBox(
-            height: 5,
-          ),
+          const Icon(Icons.hearing, color: preto, size: 34),
+          const SizedBox(height: 7),
           const Text(
-            'Identifique qual nota foi reproduzida.',
-            textAlign:
-                TextAlign.center,
+            'Identifique a nota',
             style: TextStyle(
-              color:
-                  Colors.white60,
-              fontSize: 13,
+              color: preto,
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(
-            height: 16,
+          const SizedBox(height: 4),
+          const Text(
+            'Ouça a nota e toque a tecla correspondente.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.black54, fontSize: 13),
           ),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
+            height: 43,
             child: ElevatedButton.icon(
-              onPressed:
-                  _tocando
-                      ? null
-                      : _tocarNota,
-              icon: const Icon(
-                Icons.volume_up,
+              onPressed: _respondendo ? null : _tocarNota,
+              icon: const Icon(Icons.volume_up, size: 19),
+              label: const Text(
+                'Ouvir novamente',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              label: Text(
-                _tocando
-                    ? 'Reproduzindo...'
-                    : 'Ouvir novamente',
-              ),
-              style:
-                  ElevatedButton.styleFrom(
-                backgroundColor:
-                    const Color(
-                  0xFF35A85B,
-                ),
-                foregroundColor:
-                    Colors.white,
-                padding:
-                    const EdgeInsets
-                        .symmetric(
-                  vertical: 14,
-                ),
-                shape:
-                    RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius
-                          .circular(
-                    12,
-                  ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: preto,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPiano() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF050B1B),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: AspectRatio(
+        aspectRatio: 7 / 3.2,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: _notas.map((nota) {
+            final nome = nota['nome']!;
+
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: GestureDetector(
+                  onTap: _respondendo
+                      ? null
+                      : () {
+                          _responder(nome);
+                        },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    decoration: BoxDecoration(
+                      color: _corTecla(nome),
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(8),
+                      ),
+                      border: Border.all(color: Colors.black38),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          offset: Offset(0, 4),
+                          blurRadius: 3,
+                        ),
+                      ],
+                    ),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          nome,
+                          style: TextStyle(
+                            color: _corTextoTecla(nome),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
 
   Widget _buildFeedback() {
-    if (_respostaCorreta ==
-        null) {
-      return const SizedBox
-          .shrink();
+    if (!_mostrarFeedback || _acertou == null) {
+      return const SizedBox(height: 48);
     }
 
-    final correto =
-        _respostaCorreta!;
-
     return Container(
-      margin:
-          const EdgeInsets.only(
-        top: 18,
-      ),
-      padding:
-          const EdgeInsets.all(
-        18,
-      ),
-      decoration:
-          BoxDecoration(
-        color: correto
-            ? const Color(
-                0xFF17251C,
-              )
-            : const Color(
-                0xFF281717,
-              ),
-        borderRadius:
-            BorderRadius.circular(
-          18,
-        ),
-        border: Border.all(
-          color: correto
-              ? const Color(
-                  0xFF35A85B,
-                )
-              : const Color(
-                  0xFFD94B4B,
-                ),
-        ),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _acertou! ? Colors.green : Colors.red,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            correto
-                ? Icons.check_circle
-                : Icons.cancel,
-            color: correto
-                ? const Color(
-                    0xFF35A85B,
-                  )
-                : const Color(
-                    0xFFD94B4B,
-                  ),
-            size: 34,
+            _acertou! ? Icons.check_circle : Icons.cancel,
+            color: Colors.white,
+            size: 23,
           ),
-          const SizedBox(
-            width: 12,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
-              children: [
-                Text(
-                  correto
-                      ? 'Muito bem! +10 XP'
-                      : 'Resposta incorreta',
-                  style:
-                      const TextStyle(
-                    color:
-                        Colors.white,
-                    fontSize: 16,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(
-                  height: 4,
-                ),
-                Text(
-                  correto
-                      ? 'Você identificou a nota corretamente.'
-                      : 'A nota correta era ${_notaAtual['nome']}.',
-                  style:
-                      const TextStyle(
-                    color:
-                        Colors.white70,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              _acertou! ? 'Correto! +10 XP' : 'Incorreto',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildProximaNota() {
-    if (_respostaCorreta ==
-        null) {
-      return const SizedBox
-          .shrink();
-    }
-
-    return Padding(
-      padding:
-          const EdgeInsets.only(
-        top: 18,
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed:
-              _salvandoProgresso
-                  ? null
-                  : _proximaNota,
-          style:
-              ElevatedButton.styleFrom(
-            backgroundColor:
-                Colors.white,
-            foregroundColor:
-                Colors.black,
-            padding:
-                const EdgeInsets
-                    .symmetric(
-              vertical: 15,
-            ),
-            shape:
-                RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(
-                12,
-              ),
-            ),
-          ),
-          child: const Text(
-            'Próxima nota',
-            style: TextStyle(
-              fontWeight:
-                  FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(
-    BuildContext context,
-  ) {
-    return Scaffold(
-      backgroundColor:
-          const Color(0xFF0D0D0D),
-      appBar: AppBar(
-        backgroundColor:
-            const Color(0xFF0D0D0D),
-        elevation: 0,
-        title: const Text(
-          'Exercícios auditivos',
-          style: TextStyle(
-            fontWeight:
-                FontWeight.bold,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding:
-              const EdgeInsets.all(
-            20,
-          ),
-          children: [
-            const Text(
-              'Identifique a nota',
-              style: TextStyle(
-                color:
-                    Colors.white,
-                fontSize: 25,
-                fontWeight:
-                    FontWeight.bold,
-              ),
-            ),
-            const SizedBox(
-              height: 6,
-            ),
-            const Text(
-              'Ouça o som e escolha a tecla correspondente.',
-              style: TextStyle(
-                color:
-                    Colors.white60,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            _buildPlayer(),
-            const SizedBox(
-              height: 22,
-            ),
-            Container(
-              padding:
-                  const EdgeInsets
-                      .all(12),
-              decoration:
-                  BoxDecoration(
-                color:
-                    const Color(
-                  0xFF151515,
-                ),
-                borderRadius:
-                    BorderRadius.circular(
-                  16,
-                ),
-              ),
-              child: _buildTeclado(),
-            ),
-            _buildFeedback(),
-            _buildProximaNota(),
-          ],
-        ),
       ),
     );
   }
