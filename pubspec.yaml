@@ -17,6 +17,7 @@ dependencies:
   firebase_auth: ^6.5.1
   cloud_firestore: ^6.4.1
   audioplayers: 6.6.0
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

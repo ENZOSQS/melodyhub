@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'register_page.dart';
-import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,6 +17,44 @@ class _LoginPageState extends State<LoginPage> {
 
   bool carregando = false;
   bool mostrarSenha = false;
+  List<String> emailsSalvos = [];
+  final SharedPreferencesAsync _preferencias = SharedPreferencesAsync();
+  static const String _chaveEmails = 'melodyhub_emails_login';
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarEmailsSalvos();
+  }
+
+  Future<void> _carregarEmailsSalvos() async {
+    try {
+      final emails = await _preferencias.getStringList(_chaveEmails) ?? [];
+      if (!mounted) return;
+      setState(() {
+        emailsSalvos = emails;
+        if (emailController.text.isEmpty && emails.isNotEmpty) {
+          emailController.text = emails.first;
+        }
+      });
+    } catch (_) {
+      // O preenchimento manual continua disponível se o armazenamento local falhar.
+    }
+  }
+
+  Future<void> _salvarEmail(String email) async {
+    try {
+      final emails = await _preferencias.getStringList(_chaveEmails) ?? [];
+      final atualizados = [
+        email,
+        ...emails.where((item) => item.toLowerCase() != email.toLowerCase()),
+      ].take(5).toList();
+      await _preferencias.setStringList(_chaveEmails, atualizados);
+      if (mounted) setState(() => emailsSalvos = atualizados);
+    } catch (_) {
+      // A falha ao salvar uma sugestão não deve impedir o login.
+    }
+  }
 
   @override
   void dispose() {
@@ -31,9 +69,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email.isEmpty || senha.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preencha o e-mail e a senha.'),
-        ),
+        const SnackBar(content: Text('Preencha o e-mail e a senha.')),
       );
       return;
     }
@@ -43,26 +79,11 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final credencial =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: senha,
       );
-
-      print('Login realizado com sucesso!');
-      print('UID: ${credencial.user?.uid}');
-
-      if (!mounted) return;
-
-      // Depois do login, vai para a Home.
-      // O pushReplacement impede voltar para o Login
-      // usando o botão voltar.
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const HomePage(),
-        ),
-      );
+      await _salvarEmail(email);
     } on FirebaseAuthException catch (e) {
       String mensagem = 'Não foi possível fazer login.';
 
@@ -78,22 +99,14 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagem),
-        ),
-      );
-
-      print('Erro Firebase Auth: ${e.code}');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(mensagem)));
     } catch (e) {
-      print('Erro: $e');
-
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ocorreu um erro inesperado.'),
-        ),
+        const SnackBar(content: Text('Ocorreu um erro inesperado.')),
       );
     } finally {
       if (mounted) {
@@ -107,9 +120,7 @@ class _LoginPageState extends State<LoginPage> {
   void abrirCadastro() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const RegisterPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const RegisterPage()),
     );
   }
 
@@ -124,9 +135,7 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.all(24),
 
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 430,
-              ),
+              constraints: const BoxConstraints(maxWidth: 430),
 
               child: Container(
                 padding: const EdgeInsets.all(28),
@@ -137,7 +146,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       blurRadius: 25,
                       offset: const Offset(0, 10),
                     ),
@@ -147,7 +156,6 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-
                     // LOGO
                     Center(
                       child: Container(
@@ -187,10 +195,7 @@ class _LoginPageState extends State<LoginPage> {
                       'Aprenda música de um jeito mais divertido.',
                       textAlign: TextAlign.center,
 
-                      style: TextStyle(
-                        color: Colors.black54,
-                        fontSize: 15,
-                      ),
+                      style: TextStyle(color: Colors.black54, fontSize: 15),
                     ),
 
                     const SizedBox(height: 30),
@@ -212,10 +217,11 @@ class _LoginPageState extends State<LoginPage> {
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => FocusScope.of(context).nextFocus(),
 
-                      style: const TextStyle(
-                        color: Color(0xFF0B1736),
-                      ),
+                      style: const TextStyle(color: Color(0xFF0B1736)),
 
                       decoration: InputDecoration(
                         labelText: 'E-mail',
@@ -224,6 +230,27 @@ class _LoginPageState extends State<LoginPage> {
                           Icons.email_outlined,
                           color: Color(0xFF0B1736),
                         ),
+
+                        suffixIcon: emailsSalvos.isEmpty
+                            ? null
+                            : PopupMenuButton<String>(
+                                tooltip: 'E-mails usados recentemente',
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Color(0xFF0B1736),
+                                ),
+                                onSelected: (email) {
+                                  setState(() => emailController.text = email);
+                                },
+                                itemBuilder: (context) => emailsSalvos
+                                    .map(
+                                      (email) => PopupMenuItem<String>(
+                                        value: email,
+                                        child: Text(email),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
 
                         filled: true,
                         fillColor: const Color(0xFFF4F6FA),
@@ -242,9 +269,7 @@ class _LoginPageState extends State<LoginPage> {
                       controller: senhaController,
                       obscureText: !mostrarSenha,
 
-                      style: const TextStyle(
-                        color: Color(0xFF0B1736),
-                      ),
+                      style: const TextStyle(color: Color(0xFF0B1736)),
 
                       decoration: InputDecoration(
                         labelText: 'Senha',
@@ -287,9 +312,7 @@ class _LoginPageState extends State<LoginPage> {
                       height: 54,
 
                       child: ElevatedButton(
-                        onPressed: carregando
-                            ? null
-                            : fazerLogin,
+                        onPressed: carregando ? null : fazerLogin,
 
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF16D9C5),
@@ -326,31 +349,19 @@ class _LoginPageState extends State<LoginPage> {
                     // DIVISOR
                     Row(
                       children: [
-                        Expanded(
-                          child: Divider(
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
+                        Expanded(child: Divider(color: Colors.grey.shade300)),
 
                         const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 12),
 
                           child: Text(
                             'ou',
 
-                            style: TextStyle(
-                              color: Colors.black45,
-                            ),
+                            style: TextStyle(color: Colors.black45),
                           ),
                         ),
 
-                        Expanded(
-                          child: Divider(
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
+                        Expanded(child: Divider(color: Colors.grey.shade300)),
                       ],
                     ),
 

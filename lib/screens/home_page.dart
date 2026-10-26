@@ -5,12 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'achievements_screen.dart';
-import 'exercises_screen.dart';
 import 'history_screen.dart';
+import 'icon_shop_screen.dart';
+import 'learning_path_screen.dart';
 import 'keyboard_screen.dart';
 import 'profile_screen.dart';
 import 'performance_screen.dart';
-import 'theory_exercises_screen.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -105,6 +105,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildCardXP(
                     xp: xp,
+                    pontos: _numero(dados['pontos']),
                     nivel: nivel,
                     progresso: progresso,
                     xpProximo: xpProximo,
@@ -131,14 +132,16 @@ class HomePage extends StatelessWidget {
                   _buildOpcaoPrincipal(
                     context,
                     icone: Icons.piano,
-                    titulo: 'Exercício Prático',
+                    titulo: 'Trilha Prática',
                     descricao:
-                        'Identifique as notas usando o teclado de piano.',
+                        'Avance pelas fases de percepção e memória auditiva.',
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ExercisesScreen(),
+                          builder: (_) => const LearningPathScreen(
+                            track: LearningTrack.pratica,
+                          ),
                         ),
                       );
                     },
@@ -149,13 +152,55 @@ class HomePage extends StatelessWidget {
                   _buildOpcaoPrincipal(
                     context,
                     icone: Icons.menu_book,
-                    titulo: 'Exercício Teórico',
-                    descricao: 'Teste seus conhecimentos de teoria musical.',
+                    titulo: 'Trilha Teórica',
+                    descricao:
+                        'Explore fases de teoria e refaça as já concluídas.',
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const TheoryExercisesScreen(),
+                          builder: (_) => const LearningPathScreen(
+                            track: LearningTrack.teoria,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  _buildOpcaoPrincipal(
+                    context,
+                    icone: Icons.graphic_eq,
+                    titulo: 'Trilha de Intervalos',
+                    descricao:
+                        'Reconheça distâncias entre notas em fases progressivas.',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LearningPathScreen(
+                            track: LearningTrack.intervalos,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  _buildOpcaoPrincipal(
+                    context,
+                    icone: Icons.storefront,
+                    titulo:
+                        'Loja de ícones · ${_numero(dados['pontos'])} pontos',
+                    descricao:
+                        'Acumule pontos nos exercícios e personalize seu perfil.',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IconShopScreen(),
                         ),
                       );
                     },
@@ -311,6 +356,7 @@ class HomePage extends StatelessWidget {
 
   Widget _buildCardXP({
     required int xp,
+    required int pontos,
     required int nivel,
     required double progresso,
     required int xpProximo,
@@ -342,13 +388,26 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              Text(
-                '$xp XP',
-                style: const TextStyle(
-                  color: preto,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$xp XP',
+                    style: const TextStyle(
+                      color: preto,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    '$pontos pontos',
+                    style: const TextStyle(
+                      color: verdeEscuro,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
