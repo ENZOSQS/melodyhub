@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../services/progress_service.dart';
+import '../theme/app_theme.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -12,7 +13,7 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   static const Color verde = Color(0xFF16D9C5);
-  static const Color preto = Color(0xFF0B1736);
+  static const Color preto = Color(0xFF0A1020);
   final ProgressService _service = ProgressService();
   int? _periodo;
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _documentos = [];
@@ -220,8 +221,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +241,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 Text(
                   'Exercício ${dados['tipo'] ?? 'Prático'}',
                   style: const TextStyle(
-                    color: preto,
+                    color: AppColors.text,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -250,22 +252,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
                 if (pergunta != null && pergunta.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(pergunta, style: const TextStyle(color: preto)),
+                  Text(pergunta, style: const TextStyle(color: AppColors.text)),
                 ],
                 if (resposta != null)
                   Text(
                     'Sua resposta: $resposta',
-                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                    ),
                   ),
                 if (!acertou && correta != null)
                   Text(
                     'Resposta correta: $correta',
-                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                    ),
                   ),
                 const SizedBox(height: 5),
                 Text(
                   '${_formatarData(data)}  •  ${_formatarDuracao(duracao)}',
-                  style: const TextStyle(color: Colors.black45, fontSize: 11),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
                 ),
               ],
             ),
@@ -273,7 +281,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           const SizedBox(width: 8),
           Text(
             '+${_numero(dados['xpGanho'])} XP',
-            style: const TextStyle(color: preto, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

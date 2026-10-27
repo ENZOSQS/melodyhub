@@ -17,7 +17,7 @@ class TheoryExercisesScreen extends StatefulWidget {
 class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
     with WidgetsBindingObserver {
   static const Color _verde = Color(0xFF16D9C5);
-  static const Color _preto = Color(0xFF0B1736);
+  static const Color _preto = Color(0xFF0A1020);
   static const List<String> _nomesDificuldade = [
     'Iniciante',
     'Intermediário',

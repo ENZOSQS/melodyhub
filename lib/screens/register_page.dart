@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../theme/app_theme.dart';
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -32,9 +34,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (nome.isEmpty || email.isEmpty || senha.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preencha todos os campos.'),
-        ),
+        const SnackBar(content: Text('Preencha todos os campos.')),
       );
       return;
     }
@@ -53,31 +53,26 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      final credencial =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: senha,
-      );
+      final credencial = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: senha);
 
       final usuario = credencial.user;
 
       if (usuario == null) {
-        throw Exception(
-          'Não foi possível obter o usuário criado.',
-        );
+        throw Exception('Não foi possível obter o usuário criado.');
       }
 
       await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(usuario.uid)
           .set({
-        'uid': usuario.uid,
-        'nome': nome,
-        'email': email,
-        'xp': 0,
-        'nivel': 1,
-        'criadoEm': FieldValue.serverTimestamp(),
-      });
+            'uid': usuario.uid,
+            'nome': nome,
+            'email': email,
+            'xp': 0,
+            'nivel': 1,
+            'criadoEm': FieldValue.serverTimestamp(),
+          });
 
       await usuario.updateDisplayName(nome);
 
@@ -89,9 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Conta criada com sucesso! Faça login para continuar.',
-          ),
+          content: Text('Conta criada com sucesso! Faça login para continuar.'),
         ),
       );
 
@@ -112,11 +105,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagem),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(mensagem)));
 
       print('Erro Firebase Auth: ${e.code}');
     } catch (e) {
@@ -125,9 +116,7 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ocorreu um erro inesperado.'),
-        ),
+        const SnackBar(content: Text('Ocorreu um erro inesperado.')),
       );
     } finally {
       if (mounted) {
@@ -141,20 +130,19 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1736),
+      backgroundColor: const Color(0xFF0A1020),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 430,
-              ),
+              constraints: const BoxConstraints(maxWidth: 430),
               child: Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.border),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.25),
@@ -171,7 +159,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         height: 75,
                         width: 75,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0B1736),
+                          color: AppColors.surfaceRaised,
                           borderRadius: BorderRadius.circular(22),
                         ),
                         child: const Icon(
@@ -188,7 +176,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       'Criar conta',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF0B1736),
+                        color: AppColors.text,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
@@ -199,27 +187,22 @@ class _RegisterPageState extends State<RegisterPage> {
                     const Text(
                       'Comece sua jornada musical no Melody Hub.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.black54,
-                        fontSize: 15,
-                      ),
+                      style: TextStyle(color: AppColors.muted, fontSize: 15),
                     ),
 
                     const SizedBox(height: 30),
 
                     TextField(
                       controller: nomeController,
-                      style: const TextStyle(
-                        color: Color(0xFF0B1736),
-                      ),
+                      style: const TextStyle(color: AppColors.text),
                       decoration: InputDecoration(
                         labelText: 'Nome',
                         prefixIcon: const Icon(
                           Icons.person_outline,
-                          color: Color(0xFF0B1736),
+                          color: AppColors.primary,
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF4F6FA),
+                        fillColor: AppColors.surfaceRaised,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -232,17 +215,15 @@ class _RegisterPageState extends State<RegisterPage> {
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(
-                        color: Color(0xFF0B1736),
-                      ),
+                      style: const TextStyle(color: AppColors.text),
                       decoration: InputDecoration(
                         labelText: 'E-mail',
                         prefixIcon: const Icon(
                           Icons.email_outlined,
-                          color: Color(0xFF0B1736),
+                          color: AppColors.primary,
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF4F6FA),
+                        fillColor: AppColors.surfaceRaised,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -255,14 +236,12 @@ class _RegisterPageState extends State<RegisterPage> {
                     TextField(
                       controller: senhaController,
                       obscureText: !mostrarSenha,
-                      style: const TextStyle(
-                        color: Color(0xFF0B1736),
-                      ),
+                      style: const TextStyle(color: AppColors.text),
                       decoration: InputDecoration(
                         labelText: 'Senha',
                         prefixIcon: const Icon(
                           Icons.lock_outline,
-                          color: Color(0xFF0B1736),
+                          color: AppColors.primary,
                         ),
                         suffixIcon: IconButton(
                           onPressed: () {
@@ -274,11 +253,11 @@ class _RegisterPageState extends State<RegisterPage> {
                             mostrarSenha
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: Colors.black54,
+                            color: AppColors.muted,
                           ),
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF4F6FA),
+                        fillColor: AppColors.surfaceRaised,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -291,11 +270,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     SizedBox(
                       height: 54,
                       child: ElevatedButton(
-                        onPressed:
-                            carregando ? null : cadastrarUsuario,
+                        onPressed: carregando ? null : cadastrarUsuario,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF16D9C5),
-                          foregroundColor: const Color(0xFF0B1736),
+                          foregroundColor: AppColors.background,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -328,7 +306,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: const Text(
                         'Já tenho uma conta',
                         style: TextStyle(
-                          color: Color(0xFF0B1736),
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

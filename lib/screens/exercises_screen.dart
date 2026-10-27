@@ -18,7 +18,7 @@ class ExercisesScreen extends StatefulWidget {
 class _ExercisesScreenState extends State<ExercisesScreen>
     with WidgetsBindingObserver {
   static const Color _verde = Color(0xFF16D9C5);
-  static const Color _preto = Color(0xFF0B1736);
+  static const Color _preto = Color(0xFF0A1020);
   static const List<Map<String, String>> _notas = [
     {'nome': 'Dó', 'arquivo': 'C3.wav'},
     {'nome': 'Ré', 'arquivo': 'D3.wav'},

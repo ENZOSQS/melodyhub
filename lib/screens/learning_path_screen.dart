@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/progress_service.dart';
+import '../theme/app_theme.dart';
 import 'exercises_screen.dart';
 import 'interval_exercises_screen.dart';
 import 'theory_exercises_screen.dart';
@@ -18,7 +19,7 @@ class LearningPathScreen extends StatefulWidget {
 }
 
 class _LearningPathScreenState extends State<LearningPathScreen> {
-  static const _background = Color(0xFF0B1736);
+  static const _background = Color(0xFF0A1020);
   static const _accent = Color(0xFF16D9C5);
   final _progress = ProgressService();
   late LearningTrack _track;
@@ -260,7 +261,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: unlocked ? Colors.white : const Color(0xFF182544),
+          color: unlocked ? AppColors.surface : AppColors.surfaceRaised,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color, width: 2),
           boxShadow: unlocked
@@ -294,15 +295,12 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                 children: [
                   Text(
                     'Fase $level',
-                    style: TextStyle(
-                      color: unlocked ? Colors.black54 : Colors.white54,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: AppColors.muted, fontSize: 11),
                   ),
                   Text(
                     title,
                     style: TextStyle(
-                      color: unlocked ? _background : Colors.white,
+                      color: AppColors.text,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -313,10 +311,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         : completed
                         ? 'Concluída · $correct acertos em $attempts tentativas'
                         : 'Fase atual · toque para continuar',
-                    style: TextStyle(
-                      color: unlocked ? Colors.black54 : Colors.white38,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: AppColors.muted, fontSize: 11),
                   ),
                 ],
               ),
@@ -325,7 +320,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
               const Text(
                 'Refazer',
                 style: TextStyle(
-                  color: _background,
+                  color: AppColors.text,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),

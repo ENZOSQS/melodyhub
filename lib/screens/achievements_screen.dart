@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../data/profile_icon_rewards.dart';
+import '../theme/app_theme.dart';
 import '../widgets/achievement_card.dart';
 
 class AchievementsScreen extends StatelessWidget {
@@ -161,9 +162,9 @@ class AchievementsScreen extends StatelessWidget {
 
     if (usuario == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0D0D0D),
+        backgroundColor: const Color(0xFF0A1020),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF0D0D0D),
+          backgroundColor: const Color(0xFF0A1020),
           title: const Text('Conquistas'),
         ),
         body: const Center(
@@ -176,9 +177,9 @@ class AchievementsScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0D),
+      backgroundColor: const Color(0xFF0A1020),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D0D0D),
+        backgroundColor: const Color(0xFF0A1020),
         elevation: 0,
         title: const Text(
           'Conquistas',
@@ -193,7 +194,7 @@ class AchievementsScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF35A85B)),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
@@ -209,7 +210,7 @@ class AchievementsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF151515),
+                  color: const Color(0xFF121B2E),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white10),
                 ),
@@ -219,7 +220,7 @@ class AchievementsScreen extends StatelessWidget {
                       width: 60,
                       height: 60,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF35A85B),
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -258,7 +259,7 @@ class AchievementsScreen extends StatelessWidget {
               const SizedBox(height: 24),
               ..._conquistas.map((conquista) {
                 final id = conquista['id'] as String;
-                final recompensas = profileIconRewards
+                final recompensas = allProfileIconRewards
                     .where((recompensa) => recompensa.achievementId == id)
                     .toList();
 

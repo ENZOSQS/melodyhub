@@ -17,7 +17,7 @@ class IntervalExercisesScreen extends StatefulWidget {
 }
 
 class _IntervalExercisesScreenState extends State<IntervalExercisesScreen> {
-  static const _background = Color(0xFF0B1736);
+  static const _background = Color(0xFF0A1020);
   static const _accent = Color(0xFF16D9C5);
   static const _notes = [
     ('Dó', 'C3.wav'),

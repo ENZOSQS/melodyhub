@@ -11,13 +11,14 @@ import 'learning_path_screen.dart';
 import 'keyboard_screen.dart';
 import 'profile_screen.dart';
 import 'performance_screen.dart';
+import '../theme/app_theme.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  static const Color verde = Color(0xFF16D9C5);
-  static const Color verdeEscuro = Color(0xFF0B756A);
-  static const Color preto = Color(0xFF0B1736);
+  static const Color verde = AppColors.primary;
+  static const Color verdeEscuro = AppColors.primary;
+  static const Color preto = AppColors.background;
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +37,9 @@ class HomePage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: preto,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: preto,
+        backgroundColor: AppColors.background,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -365,8 +366,9 @@ class HomePage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,12 +378,12 @@ class HomePage extends StatelessWidget {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.star, color: preto, size: 23),
+                  Icon(Icons.star_rounded, color: verde, size: 23),
                   SizedBox(width: 8),
                   Text(
                     'Seu progresso',
                     style: TextStyle(
-                      color: preto,
+                      color: AppColors.text,
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
@@ -394,7 +396,7 @@ class HomePage extends StatelessWidget {
                   Text(
                     '$xp XP',
                     style: const TextStyle(
-                      color: preto,
+                      color: AppColors.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -417,7 +419,7 @@ class HomePage extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progresso,
               minHeight: 9,
-              backgroundColor: const Color(0xFFE6EAF0),
+              backgroundColor: AppColors.surfaceHighlight,
               valueColor: const AlwaysStoppedAnimation<Color>(verde),
             ),
           ),
@@ -427,12 +429,12 @@ class HomePage extends StatelessWidget {
             children: [
               Text(
                 'Nível $nivel',
-                style: const TextStyle(color: Colors.black54, fontSize: 12),
+                style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
               Text(
                 xpProximo > 0 ? 'Faltam $xpProximo XP' : 'Nível máximo',
                 style: const TextStyle(
-                  color: Colors.black54,
+                  color: AppColors.muted,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -455,8 +457,9 @@ class HomePage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,7 +519,7 @@ class HomePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
+        color: AppColors.surfaceRaised,
         borderRadius: BorderRadius.circular(13),
       ),
       child: Row(
@@ -555,8 +558,11 @@ class HomePage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: AppColors.border),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
@@ -568,7 +574,7 @@ class HomePage extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: preto,
+                  color: AppColors.surfaceRaised,
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Icon(icone, color: verde, size: 28),
@@ -581,7 +587,7 @@ class HomePage extends StatelessWidget {
                     Text(
                       titulo,
                       style: const TextStyle(
-                        color: preto,
+                        color: AppColors.text,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -590,7 +596,7 @@ class HomePage extends StatelessWidget {
                     Text(
                       descricao,
                       style: const TextStyle(
-                        color: Colors.black54,
+                        color: AppColors.muted,
                         fontSize: 12,
                         height: 1.25,
                       ),
@@ -598,7 +604,7 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.black38),
+              const Icon(Icons.chevron_right, color: AppColors.muted),
             ],
           ),
         ),
@@ -629,8 +635,11 @@ class HomePage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -638,7 +647,7 @@ class HomePage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
           child: Column(
             children: [
-              Icon(icone, color: preto, size: 27),
+              Icon(icone, color: verde, size: 27),
               const SizedBox(height: 7),
               Text(
                 titulo,
@@ -646,7 +655,7 @@ class HomePage extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: preto,
+                  color: AppColors.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),

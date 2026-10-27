@@ -7,7 +7,7 @@ class PerformanceScreen extends StatelessWidget {
   const PerformanceScreen({super.key});
 
   static const Color verde = Color(0xFF16D9C5);
-  static const Color preto = Color(0xFF0B1736);
+  static const Color preto = Color(0xFF0A1020);
 
   @override
   Widget build(BuildContext context) {
@@ -226,7 +226,7 @@ class PerformanceScreen extends StatelessWidget {
                     children: categorias.entries
                         .map(
                           (e) => Chip(
-                            backgroundColor: const Color(0xFF142548),
+                            backgroundColor: const Color(0xFF19263C),
                             label: Text(
                               '${e.key}: ${e.value}',
                               style: const TextStyle(color: Colors.white),
@@ -257,7 +257,7 @@ class PerformanceScreen extends StatelessWidget {
   Widget _metric(String titulo, String valor, IconData icone) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
     decoration: BoxDecoration(
-      color: const Color(0xFF142548),
+      color: const Color(0xFF19263C),
       borderRadius: BorderRadius.circular(15),
     ),
     child: Column(
@@ -286,7 +286,7 @@ class PerformanceScreen extends StatelessWidget {
   Widget _painel({required String titulo, required Widget child}) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: const Color(0xFF142548),
+      color: const Color(0xFF19263C),
       borderRadius: BorderRadius.circular(18),
       border: Border.all(color: Colors.white10),
     ),

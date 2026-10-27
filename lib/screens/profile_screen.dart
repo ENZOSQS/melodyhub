@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 
 import '../data/profile_icon_rewards.dart';
 import '../services/progress_service.dart';
+import '../theme/app_theme.dart';
+import 'icon_shop_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,15 +19,12 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   static const Color verde = Color(0xFF16D9C5);
 
-  static const Color preto = Color(0xFF0B1736);
-
   final ProgressService _service = ProgressService();
 
   final TextEditingController _nomeController = TextEditingController();
 
   bool _editando = false;
   bool _salvando = false;
-  bool _salvandoIcone = false;
 
   @override
   void dispose() {
@@ -81,26 +80,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  Future<void> _selecionarIcone(String? id) async {
-    if (_salvandoIcone) return;
-    setState(() => _salvandoIcone = true);
-    try {
-      await _service.atualizarIconePerfil(id);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Esse ícone ainda não foi desbloqueado.'),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _salvandoIcone = false);
-    }
-  }
-
   Widget _iconePerfil(String? id, {double size = 43}) {
-    final encontrados = profileIconRewards.where((item) => item.id == id);
+    final encontrados = allProfileIconRewards.where((item) => item.id == id);
     final recompensa = encontrados.isEmpty ? null : encontrados.first;
     if (recompensa?.assetPath != null) {
       return Image.asset(
@@ -125,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (usuario == null) {
       return const Scaffold(
-        backgroundColor: preto,
+        backgroundColor: AppColors.background,
         body: Center(
           child: Text(
             'Usuário não autenticado.',
@@ -136,9 +117,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: preto,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: preto,
+        backgroundColor: AppColors.background,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -187,9 +168,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               : (acertos * 100 / exercicios).round();
 
           final conquistas = List<String>.from(dados['conquistas'] ?? []);
-          final iconesComprados = List<String>.from(
-            dados['iconesComprados'] ?? <String>[],
-          );
           final iconePerfilId = dados['iconePerfilId'] as String?;
 
           if (!_editando && _nomeController.text != nome.toString()) {
@@ -205,21 +183,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
+                      border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(22),
                     ),
                     child: Column(
                       children: [
                         CircleAvatar(
                           radius: 40,
-                          backgroundColor: preto,
+                          backgroundColor: AppColors.surfaceRaised,
                           child: _iconePerfil(iconePerfilId),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           nome.toString(),
                           style: const TextStyle(
-                            color: preto,
+                            color: AppColors.text,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
@@ -227,27 +206,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 4),
                         Text(
                           usuario.email ?? '',
-                          style: const TextStyle(color: Colors.black54),
+                          style: const TextStyle(color: AppColors.muted),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           'Nível $nivel',
                           style: const TextStyle(
-                            color: verdeEscuro,
+                            color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const IconShopScreen(initialTab: 1),
+                        ),
+                      ),
+                      icon: const Icon(Icons.collections_outlined),
+                      label: const Text('Abrir minha coleção'),
+                    ),
+                  ),
                   const SizedBox(height: 14),
                   _buildNome(),
-                  const SizedBox(height: 14),
-                  _buildIconesPerfil(
-                    conquistas,
-                    iconesComprados,
-                    iconePerfilId,
-                  ),
                   const SizedBox(height: 14),
                   _buildDesempenho(
                     xp,
@@ -269,8 +255,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: const Icon(Icons.logout),
                       label: const Text('Sair da conta'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white54),
+                        foregroundColor: AppColors.text,
+                        side: const BorderSide(color: AppColors.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(13),
                         ),
@@ -291,7 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -300,7 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Text(
             'Nome',
             style: TextStyle(
-              color: preto,
+              color: AppColors.text,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -309,11 +295,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextField(
             controller: _nomeController,
             enabled: _editando && !_salvando,
-            style: const TextStyle(color: preto),
+            style: const TextStyle(color: AppColors.text),
             decoration: InputDecoration(
               filled: true,
-              fillColor: const Color(0xFFF4F6FA),
-              prefixIcon: const Icon(Icons.person_outline, color: preto),
+              fillColor: AppColors.surfaceRaised,
+              prefixIcon: const Icon(
+                Icons.person_outline,
+                color: AppColors.primary,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(13),
                 borderSide: BorderSide.none,
@@ -339,8 +328,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icon(_editando ? Icons.save : Icons.edit),
               label: Text(_editando ? 'Salvar nome' : 'Editar nome'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: preto,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.background,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -349,97 +338,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildIconesPerfil(
-    List<String> conquistas,
-    List<String> iconesComprados,
-    String? selecionado,
-  ) {
-    final desbloqueados = profileIconRewards
-        .where(
-          (item) =>
-              conquistas.contains(item.achievementId) ||
-              iconesComprados.contains(item.id),
-        )
-        .toList();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Ícone de perfil',
-            style: TextStyle(
-              color: preto,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 5),
-          const Text(
-            'Desbloqueie ícones especiais ao conquistar marcos musicais.',
-            style: TextStyle(color: Colors.black54, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _opcaoIcone(
-                id: null,
-                nome: 'Padrão',
-                icone: Icons.person_outline,
-                selecionado: selecionado == null,
-              ),
-              ...desbloqueados.map(
-                (item) => _opcaoIcone(
-                  id: item.id,
-                  nome: item.name,
-                  icone: item.fallbackIcon,
-                  assetPath: item.assetPath,
-                  selecionado: selecionado == item.id,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _opcaoIcone({
-    required String? id,
-    required String nome,
-    required IconData icone,
-    required bool selecionado,
-    String? assetPath,
-  }) {
-    return ChoiceChip(
-      selected: selecionado,
-      onSelected: _salvandoIcone ? null : (_) => _selecionarIcone(id),
-      avatar: CircleAvatar(
-        backgroundColor: preto,
-        child: assetPath == null
-            ? Icon(icone, color: verde, size: 18)
-            : Image.asset(
-                assetPath,
-                width: 22,
-                height: 22,
-                errorBuilder: (_, __, ___) =>
-                    Icon(icone, color: verde, size: 18),
-              ),
-      ),
-      label: Text(nome),
-      selectedColor: verde.withValues(alpha: 0.25),
-      labelStyle: const TextStyle(color: preto, fontSize: 12),
-      side: BorderSide(color: selecionado ? verde : Colors.black12),
     );
   }
 
@@ -458,7 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -467,7 +365,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Text(
             'Desempenho',
             style: TextStyle(
-              color: preto,
+              color: AppColors.text,
               fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
@@ -517,12 +415,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F6FA),
+        color: AppColors.surfaceRaised,
         borderRadius: BorderRadius.circular(13),
       ),
       child: Row(
         children: [
-          Icon(icone, color: preto, size: 21),
+          Icon(icone, color: AppColors.primary, size: 21),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -530,12 +428,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   titulo,
-                  style: const TextStyle(color: Colors.black54, fontSize: 11),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
                 ),
                 Text(
                   valor,
                   style: const TextStyle(
-                    color: preto,
+                    color: AppColors.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -560,5 +458,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return 0;
   }
 }
-
-const Color verdeEscuro = Color(0xFF0B756A);

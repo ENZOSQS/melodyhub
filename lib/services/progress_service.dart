@@ -498,7 +498,10 @@ class ProgressService {
       if (!conquistas.contains('primeira_compra')) {
         conquistas.add('primeira_compra');
       }
-      if (comprados.length >= profileIconRewards.length &&
+      final novosIconesComprados = comprados
+          .where((id) => profileIconRewards.any((item) => item.id == id))
+          .toSet();
+      if (novosIconesComprados.length >= profileIconRewards.length &&
           !conquistas.contains('colecionador_icones')) {
         conquistas.add('colecionador_icones');
       }
@@ -513,7 +516,7 @@ class ProgressService {
   Future<void> atualizarIconePerfil(String? iconeId) async {
     final uid = _uid;
     if (uid == null) return;
-    final itens = profileIconRewards.where((item) => item.id == iconeId);
+    final itens = allProfileIconRewards.where((item) => item.id == iconeId);
     final referencia = _firestore.collection('usuarios').doc(uid);
     await _firestore.runTransaction((transaction) async {
       final documento = await transaction.get(referencia);

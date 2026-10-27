@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class AchievementCard extends StatelessWidget {
   final String titulo;
   final String descricao;
@@ -22,10 +24,10 @@ class AchievementCard extends StatelessWidget {
       duration: const Duration(milliseconds: 250),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: desbloqueada ? const Color(0xFF17251C) : const Color(0xFF171717),
+        color: desbloqueada ? AppColors.surfaceRaised : AppColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: desbloqueada ? const Color(0xFF35A85B) : Colors.white10,
+          color: desbloqueada ? AppColors.primary : AppColors.border,
         ),
       ),
       child: Row(
@@ -34,12 +36,14 @@ class AchievementCard extends StatelessWidget {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: desbloqueada ? const Color(0xFF35A85B) : Colors.white10,
+              color: desbloqueada
+                  ? AppColors.primary.withValues(alpha: 0.18)
+                  : AppColors.surfaceHighlight,
               shape: BoxShape.circle,
             ),
             child: Icon(
               desbloqueada ? icone : Icons.lock_outline,
-              color: desbloqueada ? Colors.white : Colors.white38,
+              color: desbloqueada ? AppColors.primary : AppColors.muted,
               size: 26,
             ),
           ),
@@ -51,7 +55,7 @@ class AchievementCard extends StatelessWidget {
                 Text(
                   titulo,
                   style: TextStyle(
-                    color: desbloqueada ? Colors.white : Colors.white54,
+                    color: desbloqueada ? AppColors.text : AppColors.muted,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -81,8 +85,8 @@ class AchievementCard extends StatelessWidget {
                           'Ícone de perfil: $recompensaPerfil',
                           style: TextStyle(
                             color: desbloqueada
-                                ? const Color(0xFF16D9C5)
-                                : Colors.white38,
+                                ? AppColors.primary
+                                : AppColors.muted,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -95,7 +99,7 @@ class AchievementCard extends StatelessWidget {
             ),
           ),
           if (desbloqueada)
-            const Icon(Icons.check_circle, color: Color(0xFF35A85B)),
+            const Icon(Icons.check_circle, color: AppColors.primary),
         ],
       ),
     );

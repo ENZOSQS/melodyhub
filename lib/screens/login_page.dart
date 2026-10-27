@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/app_theme.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -127,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1736),
+      backgroundColor: const Color(0xFF0A1020),
 
       body: SafeArea(
         child: Center(
@@ -141,8 +142,9 @@ class _LoginPageState extends State<LoginPage> {
                 padding: const EdgeInsets.all(28),
 
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.border),
 
                   boxShadow: [
                     BoxShadow(
@@ -163,7 +165,7 @@ class _LoginPageState extends State<LoginPage> {
                         width: 75,
 
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0B1736),
+                          color: AppColors.surfaceRaised,
                           borderRadius: BorderRadius.circular(22),
                         ),
 
@@ -183,7 +185,7 @@ class _LoginPageState extends State<LoginPage> {
                       textAlign: TextAlign.center,
 
                       style: TextStyle(
-                        color: Color(0xFF0B1736),
+                        color: AppColors.text,
                         fontSize: 30,
                         fontWeight: FontWeight.bold,
                       ),
@@ -195,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                       'Aprenda música de um jeito mais divertido.',
                       textAlign: TextAlign.center,
 
-                      style: TextStyle(color: Colors.black54, fontSize: 15),
+                      style: TextStyle(color: AppColors.muted, fontSize: 15),
                     ),
 
                     const SizedBox(height: 30),
@@ -205,7 +207,7 @@ class _LoginPageState extends State<LoginPage> {
                       'Bem-vindo de volta!',
 
                       style: TextStyle(
-                        color: Color(0xFF0B1736),
+                        color: AppColors.text,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
@@ -221,14 +223,14 @@ class _LoginPageState extends State<LoginPage> {
                       textInputAction: TextInputAction.next,
                       onSubmitted: (_) => FocusScope.of(context).nextFocus(),
 
-                      style: const TextStyle(color: Color(0xFF0B1736)),
+                      style: const TextStyle(color: AppColors.text),
 
                       decoration: InputDecoration(
                         labelText: 'E-mail',
 
                         prefixIcon: const Icon(
                           Icons.email_outlined,
-                          color: Color(0xFF0B1736),
+                          color: AppColors.primary,
                         ),
 
                         suffixIcon: emailsSalvos.isEmpty
@@ -237,7 +239,7 @@ class _LoginPageState extends State<LoginPage> {
                                 tooltip: 'E-mails usados recentemente',
                                 icon: const Icon(
                                   Icons.arrow_drop_down,
-                                  color: Color(0xFF0B1736),
+                                  color: AppColors.primary,
                                 ),
                                 onSelected: (email) {
                                   setState(() => emailController.text = email);
@@ -253,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
 
                         filled: true,
-                        fillColor: const Color(0xFFF4F6FA),
+                        fillColor: AppColors.surfaceRaised,
 
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -269,14 +271,14 @@ class _LoginPageState extends State<LoginPage> {
                       controller: senhaController,
                       obscureText: !mostrarSenha,
 
-                      style: const TextStyle(color: Color(0xFF0B1736)),
+                      style: const TextStyle(color: AppColors.text),
 
                       decoration: InputDecoration(
                         labelText: 'Senha',
 
                         prefixIcon: const Icon(
                           Icons.lock_outline,
-                          color: Color(0xFF0B1736),
+                          color: AppColors.primary,
                         ),
 
                         suffixIcon: IconButton(
@@ -291,12 +293,12 @@ class _LoginPageState extends State<LoginPage> {
                                 ? Icons.visibility_off
                                 : Icons.visibility,
 
-                            color: Colors.black54,
+                            color: AppColors.muted,
                           ),
                         ),
 
                         filled: true,
-                        fillColor: const Color(0xFFF4F6FA),
+                        fillColor: AppColors.surfaceRaised,
 
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -316,7 +318,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF16D9C5),
-                          foregroundColor: const Color(0xFF0B1736),
+                          foregroundColor: AppColors.background,
                           elevation: 0,
 
                           shape: RoundedRectangleBorder(
@@ -375,7 +377,7 @@ class _LoginPageState extends State<LoginPage> {
                         'Não tem uma conta? Cadastre-se',
 
                         style: TextStyle(
-                          color: Color(0xFF0B1736),
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),

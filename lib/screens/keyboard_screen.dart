@@ -114,10 +114,10 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1736),
+      backgroundColor: const Color(0xFF0A1020),
 
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0B1736),
+        backgroundColor: const Color(0xFF0A1020),
         foregroundColor: Colors.white,
         elevation: 0,
 
