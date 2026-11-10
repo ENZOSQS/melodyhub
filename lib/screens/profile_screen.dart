@@ -37,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _bpm = 80;
   String _tipoNota = 'solfejo';
   TimeOfDay _horaLembrete = const TimeOfDay(hour: 19, minute: 0);
+  List<int> _diasLembrete = List<int>.generate(7, (index) => index + 1);
 
   @override
   void dispose() {
@@ -57,6 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AppPreferences.defaultBpm(),
       AppPreferences.reminderEnabled(),
       AppPreferences.reminderTime(),
+      AppPreferences.reminderDays(),
     ]);
     if (!mounted) return;
     final time = result[4] as ({int hour, int minute});
@@ -66,6 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _bpm = result[2] as int;
       _lembreteAtivo = result[3] as bool;
       _horaLembrete = TimeOfDay(hour: time.hour, minute: time.minute);
+      _diasLembrete = result[5] as List<int>;
     });
   }
 
@@ -160,9 +163,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       return;
     }
-    final ok = await ReminderService.instance.scheduleDaily(
+    final ok = await ReminderService.instance.scheduleWeekly(
       hour: _horaLembrete.hour,
       minute: _horaLembrete.minute,
+      dias: _diasLembrete,
     );
     if (ok) {
       await AppPreferences.setReminderEnabled(true);
@@ -187,14 +191,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _horaLembrete = time);
     await AppPreferences.setReminderTime(time.hour, time.minute);
     if (_lembreteAtivo) {
-      final ok = await ReminderService.instance.scheduleDaily(
+      final ok = await ReminderService.instance.scheduleWeekly(
         hour: time.hour,
         minute: time.minute,
+        dias: _diasLembrete,
       );
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Não foi possível atualizar o horário do lembrete.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _alternarDiaLembrete(int dia) async {
+    final dias = List<int>.from(_diasLembrete);
+    if (dias.contains(dia)) {
+      if (dias.length == 1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mantenha pelo menos um dia selecionado.'),
+          ),
+        );
+        return;
+      }
+      dias.remove(dia);
+    } else {
+      dias.add(dia);
+      dias.sort();
+    }
+    setState(() => _diasLembrete = dias);
+    await AppPreferences.setReminderDays(dias);
+    if (_lembreteAtivo) {
+      final ok = await ReminderService.instance.scheduleWeekly(
+        hour: _horaLembrete.hour,
+        minute: _horaLembrete.minute,
+        dias: dias,
+      );
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível atualizar os dias do lembrete.'),
           ),
         );
       }
@@ -532,11 +571,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text(
-            'Lembrete diário de estudo',
+            'Lembrete de estudo',
             style: TextStyle(color: AppColors.text),
           ),
           subtitle: Text(
-            'Aviso local às ${_horaLembrete.format(context)}',
+            'Aviso local às ${_horaLembrete.format(context)} nos dias selecionados',
             style: const TextStyle(color: AppColors.muted),
           ),
           value: _lembreteAtivo,
@@ -549,6 +588,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.schedule),
             label: Text('Alterar horário · ${_horaLembrete.format(context)}'),
           ),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          children: List.generate(7, (index) {
+            final dia = index + 1;
+            const rotulos = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+            const nomes = [
+              'segunda-feira',
+              'terça-feira',
+              'quarta-feira',
+              'quinta-feira',
+              'sexta-feira',
+              'sábado',
+              'domingo',
+            ];
+            return Tooltip(
+              message: nomes[index],
+              child: FilterChip(
+                label: Text(rotulos[index]),
+                selected: _diasLembrete.contains(dia),
+                onSelected: (_) => _alternarDiaLembrete(dia),
+                selectedColor: AppColors.primary.withValues(alpha: .25),
+                checkmarkColor: AppColors.primary,
+                labelStyle: const TextStyle(color: AppColors.text),
+              ),
+            );
+          }),
         ),
         const Text(
           'O lembrete fica salvo neste aparelho. A disponibilidade depende das permissões do sistema.',

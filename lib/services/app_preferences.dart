@@ -9,6 +9,7 @@ class AppPreferences {
   static const _reminderEnabledKey = 'lembrete_diario_ativo';
   static const _reminderHourKey = 'lembrete_diario_hora';
   static const _reminderMinuteKey = 'lembrete_diario_minuto';
+  static const _reminderDaysKey = 'lembrete_dias_semana';
 
   static Future<String> noteType() async {
     final preferences = await SharedPreferences.getInstance();
@@ -70,5 +71,31 @@ class AppPreferences {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setInt(_reminderHourKey, hour);
     await preferences.setInt(_reminderMinuteKey, minute);
+  }
+
+  static Future<List<int>> reminderDays() async {
+    final values = (await SharedPreferences.getInstance()).getStringList(
+      _reminderDaysKey,
+    );
+    if (values == null) return List<int>.generate(7, (index) => index + 1);
+    final days =
+        values
+            .map(int.tryParse)
+            .whereType<int>()
+            .where((day) => day >= 1 && day <= 7)
+            .toSet()
+            .toList()
+          ..sort();
+    return days.isEmpty ? List<int>.generate(7, (index) => index + 1) : days;
+  }
+
+  static Future<void> setReminderDays(List<int> values) async {
+    final days = values.where((day) => day >= 1 && day <= 7).toSet().toList()
+      ..sort();
+    if (days.isEmpty) return;
+    await (await SharedPreferences.getInstance()).setStringList(
+      _reminderDaysKey,
+      days.map((day) => day.toString()).toList(),
+    );
   }
 }

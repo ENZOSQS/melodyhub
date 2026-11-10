@@ -212,10 +212,10 @@ Recorrência". Hoje o lembrete é só diário.
 **Aceite:** ativar, trocar horário e trocar dias reagenda sem duplicar; desativar cancela tudo.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `lib/services/app_preferences.dart`, `lib/services/reminder_service.dart`, `lib/screens/profile_screen.dart`, `test/reminder_days_test.dart`.
+- Decisões: dias são salvos como strings no `SharedPreferences` por compatibilidade com a API de lista já usada, validados e normalizados como inteiros de 1 a 7; vazio usa semana completa como padrão. IDs semanais são `7360 + dia`; o cancelamento remove 7357 e 7360–7367 antes de reagendar.
+- Pendências: notificações agendadas requerem permissão e validação no sistema móvel; não há dispositivo de notificação real disponível nesta rodada.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou, incluindo persistência e validação dos dias.
 
 ---
 

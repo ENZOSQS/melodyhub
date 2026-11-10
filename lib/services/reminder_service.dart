@@ -72,7 +72,60 @@ class ReminderService {
   }
 
   Future<void> cancelDaily() async {
-    if (await initialize()) await _plugin.cancel(id: 7357);
+    if (!await initialize()) return;
+    await _plugin.cancel(id: 7357);
+    for (var id = 7360; id <= 7367; id++) {
+      await _plugin.cancel(id: id);
+    }
+  }
+
+  Future<bool> scheduleWeekly({
+    required int hour,
+    required int minute,
+    required List<int> dias,
+  }) async {
+    if (dias.isEmpty || dias.any((dia) => dia < 1 || dia > 7)) return false;
+    if (!await initialize()) return false;
+    try {
+      await cancelDaily();
+      final agora = tz.TZDateTime.now(tz.local);
+      for (final dia in dias.toSet()) {
+        var data = tz.TZDateTime(
+          tz.local,
+          agora.year,
+          agora.month,
+          agora.day,
+          hour,
+          minute,
+        );
+        while (data.weekday != dia || !data.isAfter(agora)) {
+          data = data.add(const Duration(days: 1));
+        }
+        await _plugin.zonedSchedule(
+          id: 7360 + dia,
+          title: 'Hora de praticar música',
+          body:
+              'Uma prática curta hoje já ajuda a manter seu ritmo de aprendizado.',
+          scheduledDate: data,
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'melodyhub_study',
+              'Lembretes de estudo',
+              channelDescription: 'Lembretes locais de prática musical',
+              importance: Importance.defaultImportance,
+            ),
+            iOS: DarwinNotificationDetails(),
+            macOS: DarwinNotificationDetails(),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+      }
+      return true;
+    } catch (_) {
+      await cancelDaily();
+      return false;
+    }
   }
 
   Future<bool> showAchievement(String title) async {
