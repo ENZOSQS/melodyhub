@@ -62,17 +62,28 @@ class _RegisterPageState extends State<RegisterPage> {
         throw Exception('Não foi possível obter o usuário criado.');
       }
 
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(usuario.uid)
-          .set({
-            'uid': usuario.uid,
-            'nome': nome,
-            'email': email,
-            'xp': 0,
-            'nivel': 1,
-            'criadoEm': FieldValue.serverTimestamp(),
-          });
+      try {
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(usuario.uid)
+            .set({
+              'uid': usuario.uid,
+              'nome': nome,
+              'email': email,
+              'xp': 0,
+              'nivel': 1,
+              'criadoEm': FieldValue.serverTimestamp(),
+            });
+      } catch (erro) {
+        try {
+          await usuario.delete();
+        } catch (erroExclusao) {
+          debugPrint(
+            'Falha ao remover conta sem perfil: ${erroExclusao.runtimeType}',
+          );
+        }
+        throw StateError('Não foi possível salvar o perfil: $erro');
+      }
 
       await usuario.updateDisplayName(nome);
 
@@ -111,7 +122,13 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ocorreu um erro inesperado.')),
+        SnackBar(
+          content: Text(
+            e is StateError
+                ? e.message.toString()
+                : 'Ocorreu um erro inesperado.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {

@@ -27,5 +27,21 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('ENTRAR'), findsOneWidget);
+    expect(find.text('Esqueci minha senha'), findsOneWidget);
+  });
+
+  testWidgets('pede o e-mail quando a recuperação começa sem endereço', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    await tester.pumpWidget(const MaterialApp(home: LoginPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Esqueci minha senha'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recuperar senha'), findsOneWidget);
+    expect(find.text('Enviar'), findsOneWidget);
   });
 }

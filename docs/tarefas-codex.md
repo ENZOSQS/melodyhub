@@ -83,10 +83,10 @@ de 60 linhas; nenhuma tela foi alterada além de imports.
 **Aceite:** o fluxo funciona com e-mail válido e com campo vazio; `flutter analyze` está limpo.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `lib/screens/login_page.dart`, `lib/screens/register_page.dart`, `test/login_page_test.dart`.
+- Decisões: quando o campo estiver vazio, a recuperação solicita o e-mail em diálogo; sucesso e `user-not-found` usam a mesma resposta para não revelar a existência da conta. Falha ao criar o perfil no Firestore tenta excluir a conta recém-criada e mostra uma mensagem de perfil não salvo.
+- Pendências: envio real de e-mail e compensação no Firebase dependem de credenciais/serviços configurados e não foram executados em integração; os fluxos de interface foram cobertos por widget test.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou.
 
 ---
 

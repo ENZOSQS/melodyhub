@@ -129,6 +129,74 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> recuperarSenha() async {
+    var email = emailController.text.trim();
+    if (email.isEmpty) {
+      final controlador = TextEditingController();
+      email =
+          (await showDialog<String>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Recuperar senha'),
+                      content: TextField(
+                        controller: controlador,
+                        keyboardType: TextInputType.emailAddress,
+                        autofocus: true,
+                        decoration: const InputDecoration(labelText: 'E-mail'),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          onPressed: () =>
+                              Navigator.pop(context, controlador.text),
+                          child: const Text('Enviar'),
+                        ),
+                      ],
+                    ),
+                  ) ??
+                  '')
+              .trim();
+      controlador.dispose();
+      if (email.isEmpty || !mounted) return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Se houver uma conta associada a este e-mail, enviaremos um link para redefinir sua senha.',
+          ),
+        ),
+      );
+    } on FirebaseAuthException catch (erro) {
+      if (!mounted) return;
+      final mensagem = switch (erro.code) {
+        'invalid-email' => 'Digite um e-mail válido.',
+        'user-not-found' =>
+          'Se houver uma conta associada a este e-mail, enviaremos um link para redefinir sua senha.',
+        _ =>
+          'Não foi possível enviar o e-mail de recuperação. Tente novamente.',
+      };
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(mensagem)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível enviar o e-mail de recuperação. Tente novamente.',
+          ),
+        ),
+      );
+    }
+  }
+
   void abrirCadastro() {
     Navigator.push(
       context,
@@ -315,6 +383,14 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
                         ),
+                      ),
+                    ),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: carregando ? null : recuperarSenha,
+                        child: const Text('Esqueci minha senha'),
                       ),
                     ),
 
