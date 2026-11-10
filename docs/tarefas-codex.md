@@ -347,10 +347,10 @@ podem ser testadas sem Firebase.
 **Aceite:** os novos testes passam junto com os existentes.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `test/exercise_catalog_test.dart`, `test/guitar_fretboard_test.dart`.
+- Decisões: o catálogo é montado sem navegar para telas que usam Firebase; o filtro de instrumento é restaurado após remontar a tela com SharedPreferences simulado. O teste do braço toca a posição pela geometria dos trastes, sem alterar o widget nem injetar áudio, e confirma corda 5/casa 3/MIDI 48.
+- Pendências: validação limitada ao widget e ao callback; toque físico e áudio do simulador não foram testados.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (38 testes, incluindo os dois novos testes de widget).
 
 ---
 
