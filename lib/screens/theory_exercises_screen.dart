@@ -175,6 +175,7 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
         dificuldade: _nivel,
         questaoId: questaoRespondida.id,
         categoria: questaoRespondida.category,
+        itemAvaliado: questaoRespondida.category,
         duracaoSegundos: duracao,
         duracaoMilissegundos: duracaoMs,
       );

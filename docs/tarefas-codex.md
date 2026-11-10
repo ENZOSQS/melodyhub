@@ -243,10 +243,10 @@ notas e intervalos críticos. O relatório atual só agrupa por categoria.
 do agrupamento passa.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `lib/services/progress_service.dart`, telas de intervalos, prática, violão, teoria e escalas/acordes, `lib/domain/report_rules.dart`, `lib/screens/performance_screen.dart`, `test/report_rules_test.dart`.
+- Decisões: agrupamento considera eventos dos últimos sete dias com `itemAvaliado`, ordena por erros, limita a cinco e exige pelo menos dois erros. Notas práticas e de violão são padronizadas em solfejo no campo analítico, independente da preferência de exibição.
+- Pendências: registros antigos sem `itemAvaliado` não podem ser agrupados, conforme solicitado; eventos com data ausente ou sem `DateTime` também são ignorados.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou, incluindo agrupamento, recorte temporal, mínimo de erros e limite de itens.
 
 ---
 

@@ -138,6 +138,7 @@ class ProgressService {
     int? dificuldade,
     String? questaoId,
     String? categoria,
+    String? itemAvaliado,
   }) async {
     final uid = _uid;
     if (uid == null) return;
@@ -175,6 +176,7 @@ class ProgressService {
         'respostaCorreta': respostaCorreta,
         'questaoId': questaoId,
         'categoria': categoria,
+        'itemAvaliado': itemAvaliado,
         'dificuldade': dificuldade,
         'duracaoSegundos': duracaoSegundos.clamp(0, 3600),
         if (duracaoMilissegundos != null)

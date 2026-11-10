@@ -193,6 +193,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
         categoria: widget.exercise == ConceptExercise.scale
             ? 'Escalas'
             : 'Acordes',
+        itemAvaliado: _answer,
       );
       final data = await _progress.buscarProgresso();
       final skills = Map<String, dynamic>.from(

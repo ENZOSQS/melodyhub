@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../services/progress_service.dart';
+import '../domain/report_rules.dart';
 import 'exercises_screen.dart';
 import 'guitar_fretboard_screen.dart';
+import 'guitar_note_exercise_screen.dart';
 import 'interval_exercises_screen.dart';
 import 'music_concepts_screen.dart';
 import 'rhythm_exercise_screen.dart';
@@ -56,6 +58,17 @@ class PerformanceScreen extends StatelessWidget {
 
           final exercicios =
               snapshot.data?.docs.map((doc) => doc.data()).toList() ?? [];
+          final eventosParaRevisao = exercicios.map((evento) {
+            final data = evento['data'];
+            return <String, dynamic>{
+              ...evento,
+              if (data is Timestamp) 'data': data.toDate().toLocal(),
+            };
+          });
+          final itensCriticos = agruparErrosCriticos(
+            eventosParaRevisao,
+            agora: DateTime.now(),
+          );
           final acertos = exercicios.where((e) => e['acertou'] == true).length;
           final total = exercicios.length;
           final precisao = total == 0 ? 0 : (acertos * 100 / total).round();
@@ -263,6 +276,43 @@ class PerformanceScreen extends StatelessWidget {
               ],
               const SizedBox(height: 12),
               _painel(
+                titulo: 'O que mais precisa de revisão',
+                child: itensCriticos.isEmpty
+                    ? const Text(
+                        'Ainda não há itens com dois ou mais erros nos últimos sete dias. Continue praticando para identificar o que merece revisão.',
+                        style: TextStyle(color: Colors.white70, height: 1.4),
+                      )
+                    : Column(
+                        children: itensCriticos.map((item) {
+                          final titulo = '${item.item} · ${item.tipo}';
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(
+                              Icons.priority_high_rounded,
+                              color: Colors.orangeAccent,
+                            ),
+                            title: Text(
+                              titulo,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${item.erros} erros em ${item.tentativas} tentativas',
+                              style: const TextStyle(color: Colors.white60),
+                            ),
+                            trailing: const Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white60,
+                            ),
+                            onTap: () => _abrirExercicio(context, item.tipo),
+                          );
+                        }).toList(),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              _painel(
                 titulo: 'O que praticar em seguida',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,6 +436,19 @@ class PerformanceScreen extends StatelessWidget {
       ));
     }
     return suggestions.take(3).toList();
+  }
+
+  void _abrirExercicio(BuildContext context, String tipo) {
+    final destino = switch (tipo) {
+      'Violão' => const GuitarNoteExerciseScreen(),
+      'Intervalo' => const IntervalExercisesScreen(),
+      'Escala' => const MusicConceptsScreen(exercise: ConceptExercise.scale),
+      'Acorde' => const MusicConceptsScreen(exercise: ConceptExercise.chord),
+      'Teórico' => const TheoryExercisesScreen(),
+      'Ritmo' => const RhythmExerciseScreen(),
+      _ => const ExercisesScreen(),
+    };
+    Navigator.push(context, MaterialPageRoute(builder: (_) => destino));
   }
 
   Widget _metric(String titulo, String valor, IconData icone) => Container(

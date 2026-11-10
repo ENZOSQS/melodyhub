@@ -135,6 +135,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
             '${nomeNota(alvo.$3, _tipoNota)} · ${_cordas[alvo.$1]}, casa ${alvo.$2}',
         dificuldade: 1,
         questaoId: 'violao_nota_${alvo.$3}',
+        itemAvaliado: nomeNota(alvo.$3, 'solfejo'),
         duracaoSegundos: (duracaoMs / 1000).ceil(),
         duracaoMilissegundos: duracaoMs,
       );

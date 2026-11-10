@@ -223,6 +223,20 @@ class _ExercisesScreenState extends State<ExercisesScreen>
         dificuldade: _nivel,
         questaoId: 'sequencia_notas_nivel_$_nivel',
         categoria: 'Memória auditiva',
+        itemAvaliado: _tamanhoSequencia == 1
+            ? nomeNota(
+                const {
+                  'C3.wav': 0,
+                  'D3.wav': 2,
+                  'E3.wav': 4,
+                  'F3.wav': 5,
+                  'G3.wav': 7,
+                  'A3.wav': 9,
+                  'B3.wav': 11,
+                }[_alvo.first['arquivo']]!,
+                'solfejo',
+              )
+            : null,
         duracaoSegundos: duracao,
         duracaoMilissegundos: duracaoMs,
       );

@@ -256,6 +256,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
         questaoId:
             'intervalo_${_level}_${_degree}_${_ascending ? 'asc' : 'desc'}',
         categoria: 'Percepção de intervalos',
+        itemAvaliado: _intervalNames[_degree],
         duracaoSegundos: duration,
         duracaoMilissegundos: durationMs,
       );
