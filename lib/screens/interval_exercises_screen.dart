@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../domain/feedback_rules.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
@@ -83,6 +84,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   String? _selected;
   int _nextLevel = 1;
   int _nextAttempts = 0;
+  int _sequenciaAcertosSessao = 0;
+  int? _ultimaNotaTocada;
+  NivelApoio? _apoioResposta;
   late int _degree;
   late bool _ascending;
   late (int, String) _firstNote;
@@ -91,6 +95,12 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
 
   Duration get _noteDuration => _slowAudio ? _duracaoLenta : _duracaoNormal;
   Duration get _noteGap => _slowAudio ? _pausaLenta : _pausaNormal;
+  NivelApoio get _apoioAtual => nivelDeApoio(
+    nivelEtapa: _level,
+    sequenciaAcertos: _sequenciaAcertosSessao,
+  );
+  NivelApoio get _apoioExibido =>
+      _selected != null ? _apoioResposta ?? _apoioAtual : _apoioAtual;
 
   String get _levelInstruction => const [
     'Compare dois saltos ascendentes: uma segunda maior e uma terça maior.',
@@ -233,6 +243,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
 
   Future<void> _answer(String answer, {required int playedMidi}) async {
     if (_playing || _saving || _selected != null) return;
+    final apoioResposta = _apoioAtual;
     final targetMidi = _midiOf(_secondNote);
     final isCorrect = playedMidi == targetMidi;
     final durationMs = _timer.elapsed.inMilliseconds;
@@ -242,9 +253,14 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       _selected = answer;
       _correct = isCorrect;
       _showExplanation = !isCorrect;
+      _apoioResposta = apoioResposta;
+      _ultimaNotaTocada = playedMidi;
       _saving = true;
     });
     try {
+      if (!isCorrect && apoioResposta == NivelApoio.iniciante) {
+        await _playCorrectExample();
+      }
       await _progress.registrarExercicio(
         acertou: isCorrect,
         tipo: 'Intervalo',
@@ -278,6 +294,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
             ? _number(data['tentativasIntervalosNivel'])
             : _number(stage['rodadaTentativas']);
         _attempts = _nextAttempts;
+        _sequenciaAcertosSessao = isCorrect ? _sequenciaAcertosSessao + 1 : 0;
         _saving = false;
       });
     } catch (_) {
@@ -286,6 +303,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
           _saving = false;
           _selected = null;
           _correct = null;
+          _apoioResposta = null;
+          _ultimaNotaTocada = null;
           _timer
             ..reset()
             ..start();
@@ -305,13 +324,50 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       _correct = null;
       _showHint = false;
       _showExplanation = false;
+      _apoioResposta = null;
+      _ultimaNotaTocada = null;
       _newQuestion();
     });
     await _playPair();
   }
 
-  String get _intervalExplanation =>
-      '${_noteName(_midiOf(_firstNote))} → ${_noteName(_midiOf(_secondNote))} percorre $_degree semiton${_degree == 1 ? '' : 's'} e forma ${_intervalNames[_degree]}. O sentido é ${_ascending ? 'ascendente' : 'descendente'}, mas o tamanho do intervalo permanece o mesmo. No teclado, conte cada tecla vizinha como um semitom.';
+  Future<void> _playCorrectExample() async {
+    if (!_inForeground) return;
+    setState(() => _playing = true);
+    try {
+      await _audio.playFor(_firstNote.$2, _noteDuration);
+      await Future<void>.delayed(_noteGap);
+      await _audio.playFor(_secondNote.$2, _noteDuration);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível repetir a demonstração do intervalo.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _playing = false);
+    }
+  }
+
+  String get _intervalExplanation {
+    final initialMidi = _midiOf(_firstNote);
+    final targetMidi = _midiOf(_secondNote);
+    final apoio = _apoioResposta ?? _apoioAtual;
+    if (apoio == NivelApoio.iniciante) {
+      return 'Tudo bem errar: o intervalo correto é ${_intervalNames[_degree]}, e ouvir as duas notas novamente ajuda seu ouvido a reconhecê-lo.';
+    }
+    final explicacao =
+        '${_noteName(initialMidi)} → ${_noteName(targetMidi)} percorre $_degree semiton${_degree == 1 ? '' : 's'} e forma ${_intervalNames[_degree]}. O sentido é ${_ascending ? 'ascendente' : 'descendente'}, mas o tamanho do intervalo permanece o mesmo. No teclado, conte cada tecla vizinha como um semitom.';
+    if (apoio != NivelApoio.avancado || _ultimaNotaTocada == null) {
+      return explicacao;
+    }
+    final distanciaTocada = (_ultimaNotaTocada! - initialMidi).abs();
+    return 'Você tocou ${_noteName(_ultimaNotaTocada!)}: a partir de ${_noteName(initialMidi)}, seu salto foi de $distanciaTocada semiton${distanciaTocada == 1 ? '' : 's'}. A nota correta era ${_noteName(targetMidi)}, a $_degree semiton${_degree == 1 ? '' : 's'} da nota inicial. $explicacao';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +434,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Nível $_level · ${_levelName(_level)}',
+                              'Nível $_level · ${_levelName(_level)} · ${nomeNivelApoio(_apoioExibido)}',
                               style: const TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.bold,
@@ -483,7 +539,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
+                          _apoioAtual == NivelApoio.avancado
+                              ? 'Ouça as duas notas e toque no piano a nota de chegada.'
+                              : 'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,

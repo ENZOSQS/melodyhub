@@ -320,10 +320,10 @@ exato e menos ajuda prévia.
 **Aceite:** os três níveis são visíveis trocando de etapa; os testes da função passam.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `lib/domain/feedback_rules.dart`, `lib/screens/interval_exercises_screen.dart`, `lib/screens/exercises_screen.dart`, `test/feedback_rules_test.dart`.
+- Decisões: etapas 1–2 usam apoio iniciante, etapa 3 intermediário, etapas 4–5 avançado; cinco acertos seguidos elevam o apoio em qualquer etapa. A sequência da sessão permanece em memória nas telas. Após erro iniciante, a resposta correta é tocada automaticamente; nos intervalos avançados, o feedback compara a nota tocada e a correta em semitons; na prática avançada, aponta a posição ordinal do primeiro erro.
+- Pendências: reprodução de áudio e transição entre etapas precisam de validação manual em dispositivo; nenhum campo novo foi gravado no Firestore.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (36 testes, incluindo cinco testes novos das regras de apoio).
 
 ---
 

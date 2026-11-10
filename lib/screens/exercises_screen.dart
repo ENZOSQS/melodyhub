@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../domain/feedback_rules.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
@@ -42,6 +43,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   int _nivel = 1;
   int _nivelAtual = 1;
   int _sequenciaAcertos = 0;
+  int _sequenciaAcertosSessao = 0;
   int _tentativasNoNivel = 0;
   int _acertosNoNivel = 0;
   int _proximoNivel = 1;
@@ -57,6 +59,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   bool _mostrarExplicacao = false;
   bool _audioLento = false;
   bool? _acertou;
+  NivelApoio? _apoioResposta;
   String? _erroInicializacao;
   String _tipoNota = 'solfejo';
   List<Map<String, String>> _alvo = [];
@@ -64,6 +67,12 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
   Duration get _duracaoNota => _audioLento ? _duracaoLenta : _duracaoNormal;
   Duration get _pausaEntreNotas => _audioLento ? _pausaLenta : _pausaNormal;
+  NivelApoio get _apoioAtual => nivelDeApoio(
+    nivelEtapa: _nivel,
+    sequenciaAcertos: _sequenciaAcertosSessao,
+  );
+  NivelApoio get _apoioExibido =>
+      _mostrarFeedback ? _apoioResposta ?? _apoioAtual : _apoioAtual;
 
   int get _tamanhoSequencia => _nivel;
 
@@ -200,6 +209,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   }
 
   Future<void> _registrarSequencia({required bool correta}) async {
+    final apoioResposta = _apoioAtual;
     _tempoQuestao.stop();
     final duracaoMs = _tempoQuestao.elapsed.inMilliseconds;
     final duracao = (duracaoMs / 1000).ceil();
@@ -210,8 +220,12 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       _mostrarFeedback = true;
       _acertou = correta;
       _mostrarExplicacao = !correta;
+      _apoioResposta = apoioResposta;
     });
     try {
+      if (!correta && apoioResposta == NivelApoio.iniciante) {
+        await _tocarSequenciaCorreta();
+      }
       await _progressService.registrarExercicio(
         acertou: correta,
         tipo: 'Prático',
@@ -266,6 +280,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
             ? _numero(progresso['sequenciaAcertosPraticos'])
             : 0;
         _sequenciaProxima = _sequenciaAcertos;
+        _sequenciaAcertosSessao = correta ? _sequenciaAcertosSessao + 1 : 0;
         _respondendo = false;
       });
     } catch (_) {
@@ -276,6 +291,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
         _mostrarDica = false;
         _mostrarExplicacao = false;
         _acertou = null;
+        _apoioResposta = null;
         _respostas = [];
         _tempoQuestao
           ..reset()
@@ -292,6 +308,28 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     }
   }
 
+  Future<void> _tocarSequenciaCorreta() async {
+    if (!_emForeground || _alvo.isEmpty) return;
+    setState(() => _reproduzindo = true);
+    try {
+      for (final nota in _alvo) {
+        if (!mounted || !_emForeground) break;
+        await _audio.playFor(nota['arquivo']!, _duracaoNota);
+        await Future<void>.delayed(_pausaEntreNotas);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível repetir a sequência correta.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _reproduzindo = false);
+    }
+  }
+
   Future<void> _avancarSequencia() async {
     setState(() {
       _nivel = _proximoNivel;
@@ -303,6 +341,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       _mostrarFeedback = false;
       _mostrarDica = false;
       _mostrarExplicacao = false;
+      _apoioResposta = null;
       _acertou = null;
       _respondendo = false;
       _tempoQuestao
@@ -316,10 +355,14 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
   String get _explicacaoSequencia {
     final correta = _alvo.map((nota) => nota['nome']).join(' → ');
-    if (_tamanhoSequencia == 1) {
-      return 'A nota tocada foi ${_alvo.first['nome']}. Compare a altura do som com as teclas do piano e cante junto para fixar a referência.';
+    final apoio = _apoioResposta ?? _apoioAtual;
+    if (_acertou == false && apoio == NivelApoio.iniciante) {
+      return 'Tudo bem errar: ouça a sequência correta mais uma vez e tente cantá-la antes de tocar.';
     }
     if (_acertou == true) {
+      if (_tamanhoSequencia == 1) {
+        return 'Você identificou a nota ${_alvo.first['nome']}. Cante junto com o som para fixar essa referência.';
+      }
       return 'Você manteve a ordem das notas: $correta. Agrupar a sequência em pequenos blocos ajuda a memória auditiva.';
     }
     var primeiraDiferenca = -1;
@@ -330,7 +373,13 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       }
     }
     if (primeiraDiferenca >= 0) {
+      if (apoio == NivelApoio.avancado) {
+        return 'Na ${primeiraDiferenca + 1}ª nota, você tocou ${_respostas[primeiraDiferenca]}, mas era ${_alvo[primeiraDiferenca]['nome']}. A sequência completa era $correta.';
+      }
       return 'Na posição ${primeiraDiferenca + 1}, você tocou ${_respostas[primeiraDiferenca]}, mas o som era ${_alvo[primeiraDiferenca]['nome']}. A sequência completa era $correta. Tente cantar cada nota antes de repeti-la.';
+    }
+    if (_tamanhoSequencia == 1) {
+      return 'A nota tocada foi ${_alvo.first['nome']}. Compare a altura do som com as teclas do piano e cante junto para fixar a referência.';
     }
     return 'A sequência completa era $correta. Tente cantá-la em blocos de duas ou três notas antes de tocar.';
   }
@@ -461,7 +510,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
           ),
           const SizedBox(height: 7),
           Text(
-            'Sequência auditiva — nível $_nivel',
+            'Sequência auditiva — nível $_nivel · ${nomeNivelApoio(_apoioExibido)}',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: _preto,
