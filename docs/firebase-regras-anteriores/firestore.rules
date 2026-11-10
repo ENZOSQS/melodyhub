@@ -1,0 +1,15 @@
+// Backup das regras do Firestore publicadas no console antes de 10/11/2026.
+// Projeto: melodyhub-4fad1. ATENÇÃO: estas regras deixavam o banco aberto
+// para leitura e escrita por qualquer pessoa. Use só para rollback emergencial.
+rules_version = '2';
+
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

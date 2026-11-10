@@ -255,3 +255,114 @@ do agrupamento passa.
 Atualize o `README.md` (seções de funcionalidades e de dados no Firestore) com os campos
 novos: `preferencias.nomenclatura`, `itemAvaliado` e o tipo `'Violão'`. Corrija também a
 frase que diz que os ícones da loja são "espaços reservados", porque as imagens já existem.
+
+
+---
+
+# Rodada 2
+
+Mesmas regras do `AGENTS.md`: uma tarefa por commit, com `flutter analyze` e `flutter test`
+passando e o bloco **Registro** preenchido. **Não publique regras do Firebase**: a
+publicação está pausada até o autor confirmar (ver `docs/publicacao-regras-firebase.md`).
+
+## Tarefa 8 — Remover o envio de foto de perfil (Storage indisponível)
+
+**Por quê:** o Firebase Storage não está ativo no projeto, e no plano gratuito (Spark) ele
+exige o plano Blaze. O botão de foto do perfil falha sempre. A personalização do perfil já
+é atendida por nome, ícones da loja e preferências.
+
+**O que fazer:**
+1. Em `lib/screens/profile_screen.dart`, remover a opção de enviar foto e o código de
+   `ImagePicker` e `FirebaseStorage`. O avatar passa a mostrar o ícone escolhido ou, se não
+   houver, a inicial do nome. Pode continuar lendo `fotoUrl` se ela existir, mas sem
+   oferecer o envio.
+2. Remover `firebase_storage` e `image_picker` do `pubspec.yaml`, se não forem usados em
+   outro lugar, e rodar `flutter pub get`. Remover também permissões de câmera ou galeria
+   que tenham sido adicionadas só para isso (AndroidManifest e Info.plist), se existirem.
+3. Remover a entrada `storage` do `firebase.json` e apagar `storage.rules`, para que um
+   `firebase deploy` sem `--only` não falhe.
+4. No `README.md`, trocar a menção à foto por: "Foto de perfil fora do escopo: requer
+   Firebase Storage (plano Blaze)".
+
+**Aceite:** o perfil abre sem o botão de foto; o app compila sem os dois pacotes; analyze e test passam.
+
+**Registro:**
+- Arquivos:
+- Decisões:
+- Pendências:
+- analyze/test:
+
+---
+
+## Tarefa 9 — Feedback adaptado ao nível do aluno (entrevista com o consultor)
+
+**Por quê:** o consultor pediu que o detalhe do feedback acompanhe o nível do aluno:
+o iniciante recebe apoio e não é sobrecarregado com o erro; o avançado recebe o erro
+exato e menos ajuda prévia.
+
+**O que fazer:**
+1. Criar `lib/domain/feedback_rules.dart` com uma função pura, por exemplo
+   `NivelApoio nivelDeApoio({required int nivelEtapa, required int sequenciaAcertos})`,
+   que retorna `iniciante` (etapa 1–2), `intermediario` (etapa 3) ou `avancado`
+   (etapa 4–5, ou 5+ acertos seguidos na sessão). Com testes em `test/feedback_rules_test.dart`.
+2. Em `interval_exercises_screen.dart`:
+   - **iniciante:** mostra o nome da nota inicial; após um erro, toca automaticamente a
+     resposta correta (nota inicial e depois a nota de chegada) e mostra uma explicação
+     curta e encorajadora (uma frase, sem a contagem de semitons);
+   - **intermediário:** comportamento atual;
+   - **avançado:** não mostra o nome da nota inicial (só o som); após um erro, mostra a
+     explicação completa: nota tocada × nota correta e a distância em semitons de cada uma.
+3. Aplicar a mesma ideia em `exercises_screen.dart` (prática de notas): no iniciante, após
+   um erro, tocar a sequência correta automaticamente; no avançado, indicar a posição
+   exata do primeiro erro na sequência ("3ª nota: você tocou Fá, era Sol").
+4. A sequência de acertos da sessão fica só em memória, na tela. Nada novo no Firestore.
+
+**Aceite:** os três níveis são visíveis trocando de etapa; os testes da função passam.
+
+**Registro:**
+- Arquivos:
+- Decisões:
+- Pendências:
+- analyze/test:
+
+---
+
+## Tarefa 10 — Testes de widget dos fluxos novos
+
+**Por quê:** o critério de aceitação do TCC pede testes além dos unitários. As telas novas
+podem ser testadas sem Firebase.
+
+**O que fazer:**
+1. `test/exercise_catalog_test.dart`: montar `ExerciseCatalogScreen` com
+   `SharedPreferences.setMockInitialValues({})`; selecionar "Violão" e verificar que só
+   aparecem o exercício de violão e o atalho do simulador; remontar a tela e verificar que
+   o filtro continua "Violão".
+2. `test/guitar_fretboard_test.dart`: montar o widget `GuitarFretboard` e simular um toque
+   numa posição conhecida (corda e casa) e verificar que o callback recebe o MIDI correto
+   (por exemplo, a 5ª corda, casa 3, dá MIDI 48, o Dó).
+3. Se alguma tela depender de Firebase ou do áudio só para ser montada, injetar a
+   dependência pelo construtor, com padrão igual ao atual, em vez de criar mocks complexos.
+   Registrar o que foi alterado.
+
+**Aceite:** os novos testes passam junto com os existentes.
+
+**Registro:**
+- Arquivos:
+- Decisões:
+- Pendências:
+- analyze/test:
+
+---
+
+## Tarefa 11 (opcional) — Assinatura de release separada da chave de debug
+
+**O que fazer:** em `android/app/build.gradle` (ou `.kts`), ler `android/key.properties` quando
+o arquivo existir e usar essa configuração de assinatura no `release`; sem o arquivo, manter
+a assinatura de debug atual. Adicionar `key.properties` e `*.jks` ao `.gitignore`. Documentar
+no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
+
+**Registro:**
+- Arquivos:
+- Decisões:
+- Pendências:
+- analyze/test:
