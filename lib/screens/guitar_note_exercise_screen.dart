@@ -32,9 +32,11 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
   bool _salvando = false;
   bool _mostrarDica = false;
   bool? _acertou;
+  bool _mostrarNomes = true;
   String _tipoNota = 'solfejo';
   (int, int, int)? _alvo;
   (int, int)? _posicaoSelecionada;
+  (int, int, int)? _selecionada;
 
   @override
   void initState() {
@@ -51,12 +53,9 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
   Future<void> _inicializar() async {
     try {
       _tipoNota = await AppPreferences.noteType();
-      final amostras = <String>{
-        for (var corda = 0; corda < 6; corda++)
-          for (var casa = 0; casa <= 5; casa++)
-            GuitarSampleMap.forPosition(corda, casa),
-      };
-      await _audio.preload(amostras);
+      // Todo o braço pode ser tocado para comparar, então todos os samples
+      // são carregados antes da primeira questão.
+      await _audio.preload(GuitarSampleMap.fretboardAssets);
       if (!mounted) return;
       setState(() => _carregando = false);
       await _novaQuestao();
@@ -81,6 +80,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
     }
     _alvo = opcoes[_random.nextInt(opcoes.length)];
     _posicaoSelecionada = null;
+    _selecionada = null;
     _mostrarDica = false;
     _acertou = null;
     _cronometro
@@ -113,10 +113,36 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
     }
   }
 
+  /// Tocar no braço só seleciona e reproduz a posição. A resposta é enviada
+  /// em [_confirmar], para que o aluno possa comparar sons e rolar o braço
+  /// sem que o primeiro toque seja tratado como resposta.
+  Future<void> _selecionar(int corda, int casa, int midi) async {
+    if (_alvo == null || _tocando || _salvando || _acertou != null) return;
+    setState(() {
+      _selecionada = (corda, casa, midi);
+      _posicaoSelecionada = (corda, casa);
+    });
+    try {
+      await _audio.playFor(
+        GuitarSampleMap.forPosition(corda, casa),
+        const Duration(milliseconds: 900),
+      );
+    } catch (_) {
+      // A seleção continua válida mesmo se o som falhar.
+    }
+  }
+
+  Future<void> _confirmar() async {
+    final selecionada = _selecionada;
+    if (selecionada == null) return;
+    await _responder(selecionada.$1, selecionada.$2, selecionada.$3);
+  }
+
   Future<void> _responder(int corda, int casa, int midi) async {
     final alvo = _alvo;
     if (alvo == null || _tocando || _salvando || _acertou != null) return;
-    final acertou = midi == alvo.$3;
+    // Para iniciantes vale o nome da nota em qualquer oitava.
+    final acertou = midi % 12 == alvo.$3 % 12;
     final duracaoMs = _cronometro.elapsed.inMilliseconds;
     _cronometro.stop();
     setState(() {
@@ -142,7 +168,10 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
       if (mounted) setState(() => _acertou = acertou);
     } catch (_) {
       if (mounted) {
-        setState(() => _posicaoSelecionada = null);
+        setState(() {
+          _posicaoSelecionada = null;
+          _selecionada = null;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Não foi possível salvar a resposta.')),
         );
@@ -178,7 +207,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                     child: Column(
                       children: [
                         const Text(
-                          'Ouça a nota tocada e encontre qualquer posição com a mesma altura no braço.',
+                          'Ouça a nota, toque no braço para comparar os sons e confirme uma posição com a mesma nota. Qualquer oitava vale.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: AppColors.text, height: 1.4),
                         ),
@@ -193,6 +222,32 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                                   : _repetirNota,
                               icon: const Icon(Icons.replay),
                               label: const Text('Ouvir novamente'),
+                            ),
+                            FilledButton.icon(
+                              onPressed:
+                                  _selecionada != null &&
+                                      _acertou == null &&
+                                      !_salvando &&
+                                      !_tocando
+                                  ? _confirmar
+                                  : null,
+                              icon: const Icon(Icons.check),
+                              label: const Text('Confirmar'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => setState(
+                                () => _mostrarNomes = !_mostrarNomes,
+                              ),
+                              icon: Icon(
+                                _mostrarNomes
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                              ),
+                              label: Text(
+                                _mostrarNomes
+                                    ? 'Ocultar nomes'
+                                    : 'Mostrar nomes',
+                              ),
                             ),
                             TextButton.icon(
                               onPressed: _acertou == null
@@ -217,7 +272,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                           const SizedBox(height: 8),
                           Text(
                             _acertou!
-                                ? 'Correto! Essa posição produz ${nomeNota(_alvo!.$3, _tipoNota)}.'
+                                ? 'Correto! Essa posição produz ${nomeNota(_alvo!.$3, _tipoNota)}${_selecionada != null && _selecionada!.$3 != _alvo!.$3 ? ', em outra oitava' : ''}.'
                                 : 'A nota era ${nomeNota(_alvo!.$3, _tipoNota)}. Compare a altura e procure a mesma nota em outra corda ou casa.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -245,7 +300,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                 const Padding(
                   padding: EdgeInsets.only(bottom: 6),
                   child: Text(
-                    'CASAS 0–12 · QUALQUER POSIÇÃO COM A MESMA NOTA VALE',
+                    'CASAS 0–12 · TOQUE PARA OUVIR · QUALQUER OITAVA VALE',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.muted,
@@ -257,8 +312,8 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                 ),
                 Expanded(
                   child: GuitarFretboard(
-                    onPositionPressed: _responder,
-                    showNoteNames: true,
+                    onPositionPressed: _selecionar,
+                    showNoteNames: _mostrarNomes,
                     tipoNota: _tipoNota,
                     activePosition: _posicaoSelecionada,
                   ),

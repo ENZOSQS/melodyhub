@@ -159,7 +159,12 @@ class _LoginPageState extends State<LoginPage> {
                   ) ??
                   '')
               .trim();
-      controlador.dispose();
+      // O diálogo ainda está animando a saída; liberar o controlador só depois
+      // evita o erro de "TextEditingController used after being disposed".
+      Future<void>.delayed(
+        const Duration(milliseconds: 500),
+        controlador.dispose,
+      );
       if (email.isEmpty || !mounted) return;
     }
 

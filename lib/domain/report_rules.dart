@@ -27,9 +27,9 @@ List<ItemCritico> agruparErrosCriticos(
     final item = evento['itemAvaliado'];
     final data = evento['data'];
     if (tipo is! String || item is! String || item.trim().isEmpty) continue;
-    if (data is! DateTime || data.isBefore(inicio) || data.isAfter(agora)) {
-      continue;
-    }
+    // Não descarta datas "futuras": o horário do servidor pode estar alguns
+    // segundos à frente do relógio do aparelho.
+    if (data is! DateTime || data.isBefore(inicio)) continue;
     final chave = (tipo, item.trim());
     final atual = contagens[chave] ?? (0, 0);
     contagens[chave] = (

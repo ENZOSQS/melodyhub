@@ -68,4 +68,18 @@ void main() {
       expect(itens.any((item) => item.item == 'Antigo'), isFalse);
     },
   );
+
+  test('conta eventos com horário do servidor à frente do aparelho', () {
+    final adiantado = agora.add(const Duration(seconds: 30));
+    final itens = agruparErrosCriticos([
+      for (var i = 0; i < 2; i++)
+        {
+          'tipo': 'Intervalo',
+          'itemAvaliado': 'Sexta menor',
+          'acertou': false,
+          'data': adiantado,
+        },
+    ], agora: agora);
+    expect(itens.single.erros, 2);
+  });
 }
