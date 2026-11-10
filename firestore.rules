@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function dono(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function progressoValido() {
+      return (!request.resource.data.keys().hasAny(['xp']) ||
+              ((request.resource.data.xp is int || request.resource.data.xp is float) && request.resource.data.xp >= 0)) &&
+             (!request.resource.data.keys().hasAny(['pontos']) ||
+              ((request.resource.data.pontos is int || request.resource.data.pontos is float) && request.resource.data.pontos >= 0)) &&
+             (!request.resource.data.keys().hasAny(['nivel']) ||
+              ((request.resource.data.nivel is int || request.resource.data.nivel is float) && request.resource.data.nivel >= 0));
+    }
+
+    match /usuarios/{uid} {
+      allow read: if dono(uid);
+      allow create, update: if dono(uid) && progressoValido();
+      allow delete: if dono(uid);
+
+      match /historico/{eventoId} {
+        allow read, write: if dono(uid);
+      }
+    }
+
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

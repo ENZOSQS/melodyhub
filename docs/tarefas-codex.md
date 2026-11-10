@@ -112,10 +112,10 @@ de 60 linhas; nenhuma tela foi alterada além de imports.
 **Não publique as regras.** Só crie os arquivos.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `firestore.rules`, `storage.rules`, `firebase.json`, `README.md`.
+- Decisões: campos numéricos aceitam `int` ou `float`; leitura das fotos exige autenticação e gravação exige propriedade, MIME de imagem e tamanho abaixo de 5 MiB. Nenhum deploy foi feito.
+- Pendências: compilação das regras pelo Emulator Suite não foi possível porque o ambiente tem Java anterior ao 21 exigido pelo Firebase CLI 15.18.0.
+- analyze/test: `firebase.json` validado como JSON; `flutter analyze` sem problemas; `flutter test` passou.
 
 ---
 
