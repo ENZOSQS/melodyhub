@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../data/profile_icon_rewards.dart';
 import '../domain/progress_rules.dart' as rules;
+import '../utils/study_streak.dart';
+import 'reminder_service.dart';
 
 class ProgressService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -25,6 +29,45 @@ class ProgressService {
     return _normalizarProgresso(dados);
   }
 
+  /// Retorna zero quando a sequência salva ficou desatualizada após um dia
+  /// inteiro sem estudo. A pessoa pode manter a sequência praticando hoje ou
+  /// retomá-la no dia seguinte ao último dia estudado.
+  int calcularSequenciaDiasAtual(
+    Map<String, dynamic> dados, {
+    DateTime? agora,
+  }) {
+    var ultimoDia = dados['ultimoDiaEstudo'] as String?;
+    final ultimoExercicio = dados['ultimoExercicio'];
+    if (ultimoDia == null && ultimoExercicio is Timestamp) {
+      ultimoDia = StudyStreak.dateKey(ultimoExercicio.toDate().toLocal());
+    }
+    return StudyStreak.currentCount(
+      savedCount: _numero(dados['sequenciaDiasAtual']),
+      lastStudyDate: ultimoDia,
+      now: agora ?? DateTime.now(),
+    );
+  }
+
+  /// Persiste uma sequência vencida para que os dados do perfil também sejam
+  /// coerentes, mesmo antes da próxima resposta a um exercício.
+  Future<void> reconciliarSequenciaDias() async {
+    final uid = _uid;
+    if (uid == null) return;
+
+    final referencia = _firestore.collection('usuarios').doc(uid);
+    await _firestore.runTransaction((transaction) async {
+      final documento = await transaction.get(referencia);
+      final dados = documento.data() ?? <String, dynamic>{};
+      final atual = _numero(dados['sequenciaDiasAtual']);
+      final vigente = calcularSequenciaDiasAtual(dados);
+      if (vigente != atual) {
+        transaction.set(referencia, {
+          'sequenciaDiasAtual': vigente,
+        }, SetOptions(merge: true));
+      }
+    });
+  }
+
   Map<String, dynamic> _progressoInicial() => {
     'xp': 0,
     'pontos': 0,
@@ -45,12 +88,18 @@ class ProgressService {
     'teoriaEtapas': <String, dynamic>{},
     'praticaEtapas': <String, dynamic>{},
     'intervaloEtapas': <String, dynamic>{},
+    'habilidadesEtapas': <String, dynamic>{},
+    'ditadosRitmicosRespondidos': 0,
+    'escalasRespondidas': 0,
+    'acordesRespondidos': 0,
     'questoesTeoriaRespondidas': 0,
     'acertosTeoria': 0,
     'tentativasTeoriaNivel': 0,
     'acertosTeoriaNivel': 0,
     'exerciciosPraticosRespondidos': 0,
     'nivelPratico': 1,
+    'tentativasPraticasNivel': 0,
+    'acertosPraticasNivel': 0,
     'sequenciaAcertosPraticos': 0,
     'melhorSequenciaAcertosPraticos': 0,
     'conquistas': <String>[],
@@ -133,7 +182,30 @@ class ProgressService {
         'data': FieldValue.serverTimestamp(),
       });
     });
+    for (final conquista in resultado.conquistasNovas) {
+      unawaited(
+        ReminderService.instance.showAchievement(_nomeConquista(conquista)),
+      );
+    }
   }
+
+  String _nomeConquista(String id) => switch (id) {
+    'primeiro_exercicio' => 'Primeiro passo',
+    'dez_acertos' => 'Ouvido afiado',
+    'cinquenta_acertos' => 'Mestre da percepção',
+    'sequencia_cinco' => 'Em sequência',
+    'cinco_dias_estudados' => 'Hábito musical',
+    'vinte_exercicios' => 'Prática constante',
+    'cem_exercicios' => 'Cem passos musicais',
+    'intervalista' => 'Caçador de intervalos',
+    'mestre_intervalos' => 'Mestre dos intervalos',
+    'teoria_intermediaria' => 'Teoria em movimento',
+    'teoria_avancada' => 'Mente harmônica',
+    'teoria_mestre' => 'Teórico especialista',
+    'memoria_musical' => 'Memória musical',
+    'memoria_musical_mestre' => 'Mestre das sequências',
+    _ => 'Nova conquista musical',
+  };
 
   Future<void> atualizarNome(String novoNome) async {
     final uid = _uid;
@@ -292,6 +364,4 @@ class ProgressService {
   int proximoNivel(int nivel) => rules.proximoNivel(nivel);
 
   int _numero(dynamic valor) => valor is num ? valor.toInt() : 0;
-
-
 }

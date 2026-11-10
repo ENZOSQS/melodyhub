@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,9 +19,11 @@ class _LoginPageState extends State<LoginPage> {
 
   bool carregando = false;
   bool mostrarSenha = false;
+  bool manterConectado = true;
   List<String> emailsSalvos = [];
   final SharedPreferencesAsync _preferencias = SharedPreferencesAsync();
   static const String _chaveEmails = 'melodyhub_emails_login';
+  static const String _chaveManterConectado = 'melodyhub_manter_conectado';
 
   @override
   void initState() {
@@ -31,9 +34,12 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _carregarEmailsSalvos() async {
     try {
       final emails = await _preferencias.getStringList(_chaveEmails) ?? [];
+      final manterConectadoSalvo =
+          await _preferencias.getBool(_chaveManterConectado) ?? true;
       if (!mounted) return;
       setState(() {
         emailsSalvos = emails;
+        manterConectado = manterConectadoSalvo;
         if (emailController.text.isEmpty && emails.isNotEmpty) {
           emailController.text = emails.first;
         }
@@ -80,6 +86,11 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      if (kIsWeb) {
+        await FirebaseAuth.instance.setPersistence(
+          manterConectado ? Persistence.LOCAL : Persistence.SESSION,
+        );
+      }
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: senha,
@@ -128,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1020),
+      backgroundColor: const Color(0xFF171316),
 
       body: SafeArea(
         child: Center(
@@ -171,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         child: const Icon(
                           Icons.music_note,
-                          color: Color(0xFF16D9C5),
+                          color: Color(0xFFE9B96E),
                           size: 42,
                         ),
                       ),
@@ -307,6 +318,37 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
+                    if (kIsWeb) ...[
+                      CheckboxListTile(
+                        value: manterConectado,
+                        onChanged: carregando
+                            ? null
+                            : (valor) async {
+                                final selecionado = valor ?? false;
+                                setState(() => manterConectado = selecionado);
+                                try {
+                                  await _preferencias.setBool(
+                                    _chaveManterConectado,
+                                    selecionado,
+                                  );
+                                } catch (_) {
+                                  // A sessão ainda pode ser definida no login.
+                                }
+                              },
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        activeColor: AppColors.primary,
+                        title: const Text(
+                          'Manter conectado',
+                          style: TextStyle(color: AppColors.text),
+                        ),
+                        subtitle: const Text(
+                          'Neste navegador',
+                          style: TextStyle(color: AppColors.muted),
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 24),
 
                     // BOTÃO ENTRAR
@@ -317,7 +359,7 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: carregando ? null : fazerLogin,
 
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF16D9C5),
+                          backgroundColor: const Color(0xFFE9B96E),
                           foregroundColor: AppColors.background,
                           elevation: 0,
 

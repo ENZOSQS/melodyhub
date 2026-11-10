@@ -1,24 +1,68 @@
 // lib/screens/home_page.dart
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'achievements_screen.dart';
 import 'history_screen.dart';
+import 'instrument_catalog_screen.dart';
 import 'icon_shop_screen.dart';
 import 'learning_path_screen.dart';
-import 'keyboard_screen.dart';
 import 'profile_screen.dart';
 import 'performance_screen.dart';
+import 'exercise_catalog_screen.dart';
 import '../theme/app_theme.dart';
+import '../services/progress_service.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   static const Color verde = AppColors.primary;
   static const Color verdeEscuro = AppColors.primary;
   static const Color preto = AppColors.background;
+
+  final ProgressService _progressService = ProgressService();
+  Timer? _midnightTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_reconciliarSequencia());
+    _agendarViradaDoDia();
+  }
+
+  @override
+  void dispose() {
+    _midnightTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _reconciliarSequencia() async {
+    try {
+      await _progressService.reconciliarSequenciaDias();
+    } catch (erro) {
+      debugPrint('Não foi possível atualizar a sequência diária: $erro');
+    }
+  }
+
+  void _agendarViradaDoDia() {
+    final agora = DateTime.now();
+    final proximaVirada = DateTime(agora.year, agora.month, agora.day + 1);
+    _midnightTimer = Timer(proximaVirada.difference(agora), () {
+      if (!mounted) return;
+      setState(() {});
+      unawaited(_reconciliarSequencia());
+      _agendarViradaDoDia();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +130,8 @@ class HomePage extends StatelessWidget {
           final exercicios = _numero(dados['exerciciosRespondidos']);
           final acertos = _numero(dados['acertos']);
           final erros = _numero(dados['erros']);
-          final sequenciaDiasAtual = _numero(dados['sequenciaDiasAtual']);
+          final sequenciaDiasAtual = _progressService
+              .calcularSequenciaDiasAtual(dados);
           final precisao = exercicios == 0
               ? 0
               : (acertos * 100 / exercicios).round();
@@ -130,20 +175,65 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
 
-                  _buildOpcaoPrincipal(
-                    context,
-                    icone: Icons.piano,
-                    titulo: 'Trilha Prática',
-                    descricao:
-                        'Avance pelas fases de percepção e memória auditiva.',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LearningPathScreen(
-                            track: LearningTrack.pratica,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final tileWidth = (constraints.maxWidth - 10) / 2;
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          SizedBox(
+                            width: tileWidth,
+                            child: _buildLearningTile(
+                              context,
+                              icon: Icons.piano,
+                              title: 'Prática',
+                              detail: 'Notas e memória auditiva',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LearningPathScreen(
+                                    track: LearningTrack.pratica,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          SizedBox(
+                            width: tileWidth,
+                            child: _buildLearningTile(
+                              context,
+                              icon: Icons.menu_book_rounded,
+                              title: 'Teoria',
+                              detail: 'Conceitos por etapas',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LearningPathScreen(
+                                    track: LearningTrack.teoria,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: tileWidth,
+                            child: _buildLearningTile(
+                              context,
+                              icon: Icons.graphic_eq_rounded,
+                              title: 'Intervalos',
+                              detail: 'Distância entre notas',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LearningPathScreen(
+                                    track: LearningTrack.intervalos,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
@@ -152,40 +242,16 @@ class HomePage extends StatelessWidget {
 
                   _buildOpcaoPrincipal(
                     context,
-                    icone: Icons.menu_book,
-                    titulo: 'Trilha Teórica',
+                    icone: Icons.explore_outlined,
+                    titulo: 'Explorar exercícios',
                     descricao:
-                        'Explore fases de teoria e refaça as já concluídas.',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LearningPathScreen(
-                            track: LearningTrack.teoria,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  _buildOpcaoPrincipal(
-                    context,
-                    icone: Icons.graphic_eq,
-                    titulo: 'Trilha de Intervalos',
-                    descricao:
-                        'Reconheça distâncias entre notas em fases progressivas.',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LearningPathScreen(
-                            track: LearningTrack.intervalos,
-                          ),
-                        ),
-                      );
-                    },
+                        'Busque práticas por habilidade, nível ou instrumento.',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ExerciseCatalogScreen(),
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 10),
@@ -211,14 +277,15 @@ class HomePage extends StatelessWidget {
 
                   _buildOpcaoPrincipal(
                     context,
-                    icone: Icons.piano_outlined,
-                    titulo: 'Simulador de Instrumento',
-                    descricao: 'Pratique livremente no instrumento virtual.',
+                    icone: Icons.queue_music_rounded,
+                    titulo: 'Simuladores de instrumentos',
+                    descricao:
+                        'Explore o teclado e o braço do violão em um só lugar.',
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const KeyboardScreen(),
+                          builder: (_) => const InstrumentCatalogScreen(),
                         ),
                       );
                     },
@@ -366,7 +433,11 @@ class HomePage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.surfaceRaised, AppColors.surface],
+        ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.border),
       ),
@@ -416,11 +487,16 @@ class HomePage extends StatelessWidget {
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: progresso,
-              minHeight: 9,
-              backgroundColor: AppColors.surfaceHighlight,
-              valueColor: const AlwaysStoppedAnimation<Color>(verde),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: progresso),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => LinearProgressIndicator(
+                value: value,
+                minHeight: 9,
+                backgroundColor: AppColors.surfaceHighlight,
+                valueColor: const AlwaysStoppedAnimation<Color>(verde),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -574,8 +650,16 @@ class HomePage extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceRaised,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.surfaceHighlight,
+                      AppColors.surfaceRaised.withValues(alpha: 0.72),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Icon(icone, color: verde, size: 28),
               ),
@@ -611,6 +695,63 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildLearningTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String detail,
+    required VoidCallback onTap,
+  }) => Material(
+    color: AppColors.surface,
+    borderRadius: BorderRadius.circular(20),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Ink(
+        height: 126,
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF342A2E), AppColors.surface],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: AppColors.primary, size: 25),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   Widget _buildOpcaoSecundaria(
     BuildContext context, {

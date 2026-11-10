@@ -19,8 +19,8 @@ class LearningPathScreen extends StatefulWidget {
 }
 
 class _LearningPathScreenState extends State<LearningPathScreen> {
-  static const _background = Color(0xFF0A1020);
-  static const _accent = Color(0xFF16D9C5);
+  static const _background = Color(0xFF171316);
+  static const _accent = Color(0xFFE9B96E);
   final _progress = ProgressService();
   late LearningTrack _track;
   Map<String, dynamic> _data = {};
@@ -44,10 +44,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     ],
     LearningTrack.intervalos: [
       'Segundas e terças',
-      'Quarta justa',
-      'Quintas',
-      'Sextas e direção',
-      'Ouvido especialista',
+      'Segundas, terças e quartas',
+      'Quintas e comparação',
+      'Sextas e sétimas',
+      'Intervalos cromáticos',
     ],
   };
 
@@ -187,53 +187,69 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
-                    itemCount: 9,
-                    itemBuilder: (context, index) {
-                      if (index.isOdd) {
-                        return const SizedBox(
-                          height: 30,
-                          child: Center(
-                            child: SizedBox(
-                              width: 4,
-                              child: ColoredBox(color: Colors.white24),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.025, 0),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: ListView.builder(
+                      key: ValueKey(_track),
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
+                      itemCount: 9,
+                      itemBuilder: (context, index) {
+                        if (index.isOdd) {
+                          return const SizedBox(
+                            height: 30,
+                            child: Center(
+                              child: SizedBox(
+                                width: 4,
+                                child: ColoredBox(color: Colors.white24),
+                              ),
+                            ),
+                          );
+                        }
+                        final level = index ~/ 2 + 1;
+                        final unlocked = level <= _currentLevel;
+                        final stats = _stageStats(level);
+                        final completed =
+                            level < _currentLevel ||
+                            (level == _currentLevel &&
+                                stats['concluida'] == true);
+                        final tries = stats['tentativas'] is num
+                            ? (stats['tentativas'] as num).toInt()
+                            : 0;
+                        final correct = stats['acertos'] is num
+                            ? (stats['acertos'] as num).toInt()
+                            : 0;
+                        final left = level.isOdd;
+                        return Align(
+                          alignment: left
+                              ? Alignment.centerLeft
+                              : Alignment.centerRight,
+                          child: SizedBox(
+                            width: MediaQuery.sizeOf(context).width * 0.76,
+                            child: _stageCard(
+                              level: level,
+                              title: _titles[_track]![level - 1],
+                              unlocked: unlocked,
+                              completed: completed,
+                              attempts: tries,
+                              correct: correct,
+                              onTap: unlocked ? () => _openStage(level) : null,
                             ),
                           ),
                         );
-                      }
-                      final level = index ~/ 2 + 1;
-                      final unlocked = level <= _currentLevel;
-                      final stats = _stageStats(level);
-                      final completed =
-                          level < _currentLevel ||
-                          (level == _currentLevel &&
-                              stats['concluida'] == true);
-                      final tries = stats['tentativas'] is num
-                          ? (stats['tentativas'] as num).toInt()
-                          : 0;
-                      final correct = stats['acertos'] is num
-                          ? (stats['acertos'] as num).toInt()
-                          : 0;
-                      final left = level.isOdd;
-                      return Align(
-                        alignment: left
-                            ? Alignment.centerLeft
-                            : Alignment.centerRight,
-                        child: SizedBox(
-                          width: MediaQuery.sizeOf(context).width * 0.76,
-                          child: _stageCard(
-                            level: level,
-                            title: _titles[_track]![level - 1],
-                            unlocked: unlocked,
-                            completed: completed,
-                            attempts: tries,
-                            correct: correct,
-                            onTap: unlocked ? () => _openStage(level) : null,
-                          ),
-                        ),
-                      );
-                    },
+                      },
+                    ),
                   ),
                 ),
               ],

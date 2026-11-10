@@ -16,8 +16,8 @@ class TheoryExercisesScreen extends StatefulWidget {
 
 class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
     with WidgetsBindingObserver {
-  static const Color _verde = Color(0xFF16D9C5);
-  static const Color _preto = Color(0xFF0A1020);
+  static const Color _verde = Color(0xFFE9B96E);
+  static const Color _preto = Color(0xFF171316);
   static const List<String> _nomesDificuldade = [
     'Iniciante',
     'Intermediário',
@@ -30,18 +30,25 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
   final Random _random = Random();
   final Stopwatch _tempoQuestao = Stopwatch();
   final Set<String> _questoesVistas = {};
+  final List<TheoryQuestion> _revisaoPendente = [];
 
   int _nivel = 1;
   int _nivelAtual = 1;
   int _tentativasNoNivel = 0;
   bool _carregando = true;
   bool _respondendo = false;
+  bool _mostrarDica = false;
+  bool _mostrarExplicacao = false;
+  bool _revisandoErro = false;
+  int _questoesAteRevisao = 0;
   String? _erroInicializacao;
   String? _respostaSelecionada;
   String _perguntaExibida = '';
   String _respostaCorretaExibida = '';
   String _modoQuestao = 'Múltipla escolha';
   bool? _acertou;
+  int _proximoNivel = 1;
+  int _tentativasProximoNivel = 0;
   late TheoryQuestion _questao;
   late List<String> _opcoes;
 
@@ -85,6 +92,7 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
       if (!mounted) return;
       _nivel = nivel;
       _nivelAtual = nivelAtual;
+      _proximoNivel = nivel;
       _tentativasNoNivel = nivel == nivelAtual
           ? _numero(progresso['tentativasTeoriaNivel'])
           : _numero(etapa['tentativas']) % 10;
@@ -107,52 +115,54 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
   }
 
   TheoryQuestion _sortearQuestao() {
-    var disponiveis = theoryQuestionBank
+    final levelQuestions = theoryQuestionBank
         .where((questao) => questao.difficulty == _nivel)
-        .where((questao) => !_questoesVistas.contains(questao.id))
-        .toList();
-    if (disponiveis.isEmpty) {
-      _questoesVistas.clear();
-      disponiveis = theoryQuestionBank
-          .where((questao) => questao.difficulty == _nivel)
-          .toList();
-    }
-    disponiveis.shuffle(_random);
-    final questao = disponiveis.first;
-    _questoesVistas.add(questao.id);
-    if (_random.nextInt(3) == 0) {
-      final verdadeira = _random.nextBool();
-      final respostaProposta = verdadeira
-          ? questao.answer
-          : questao.options
-                .where((opcao) => opcao != questao.answer)
-                .elementAt(_random.nextInt(questao.options.length - 1));
-      _modoQuestao = 'Verdadeiro ou falso';
-      _perguntaExibida =
-          'A resposta proposta está correta?\n${questao.prompt}\n\n$respostaProposta';
-      _respostaCorretaExibida = verdadeira ? 'Verdadeiro' : 'Falso';
-      _opcoes = ['Verdadeiro', 'Falso'];
+        .toList(growable: false);
+
+    TheoryQuestion questao;
+    if (_revisaoPendente.isNotEmpty && _questoesAteRevisao <= 0) {
+      questao = _revisaoPendente.first;
+      _revisandoErro = true;
     } else {
-      _modoQuestao = 'Múltipla escolha';
-      _perguntaExibida = questao.prompt;
-      _respostaCorretaExibida = questao.answer;
-      _opcoes = [...questao.options]..shuffle(_random);
+      _revisandoErro = false;
+      var disponiveis = levelQuestions
+          .where((item) => !_questoesVistas.contains(item.id))
+          .toList();
+      if (disponiveis.isEmpty) {
+        _questoesVistas.clear();
+        disponiveis = levelQuestions;
+      }
+      // The bank is intentionally traversed in its authored order so each
+      // level teaches concepts in a stable sequence instead of reshuffling
+      // unrelated topics on every visit.
+      questao = disponiveis.first;
+      _questoesVistas.add(questao.id);
     }
+
+    _modoQuestao = _revisandoErro
+        ? 'Revisão de aprendizagem'
+        : 'Múltipla escolha';
+    _perguntaExibida = questao.prompt;
+    _respostaCorretaExibida = questao.answer;
+    _opcoes = [...questao.options]..shuffle(_random);
     return questao;
   }
 
   Future<void> _responder(String resposta) async {
-    if (_respondendo || _carregando) return;
+    if (_respondendo || _carregando || _respostaSelecionada != null) return;
     final questaoRespondida = _questao;
     final correta = resposta == _respostaCorretaExibida;
+    final estavaRevisando = _revisandoErro;
     final perguntaRespondida = _perguntaExibida;
     final respostaCorreta = _respostaCorretaExibida;
     _tempoQuestao.stop();
-    final duracao = _tempoQuestao.elapsed.inSeconds;
+    final duracaoMs = _tempoQuestao.elapsed.inMilliseconds;
+    final duracao = (duracaoMs / 1000).ceil();
     setState(() {
       _respondendo = true;
       _respostaSelecionada = resposta;
       _acertou = correta;
+      _mostrarExplicacao = !correta;
     });
 
     try {
@@ -166,9 +176,16 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
         questaoId: questaoRespondida.id,
         categoria: questaoRespondida.category,
         duracaoSegundos: duracao,
+        duracaoMilissegundos: duracaoMs,
       );
       final progresso = await _progressService.buscarProgresso();
       if (!mounted) return;
+      if (!estavaRevisando &&
+          !correta &&
+          !_revisaoPendente.any((item) => item.id == questaoRespondida.id)) {
+        _revisaoPendente.add(questaoRespondida);
+        if (_revisaoPendente.length == 1) _questoesAteRevisao = 2;
+      }
       final novoNivel = _numero(progresso['nivelTeoria']).clamp(1, 5).toInt();
       final estavaNaEtapaAtual = _nivel == _nivelAtual;
       if (estavaNaEtapaAtual && novoNivel != _nivel) {
@@ -187,21 +204,15 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
         etapas['${estavaNaEtapaAtual ? novoNivel : _nivel}'] as Map? ??
             const <String, dynamic>{},
       );
-      await Future<void>.delayed(const Duration(milliseconds: 750));
-      if (!mounted) return;
+      final nivelSeguinte = estavaNaEtapaAtual ? novoNivel : _nivel;
+      final tentativasSeguinte = nivelSeguinte == novoNivel
+          ? _numero(progresso['tentativasTeoriaNivel'])
+          : _numero(etapaSelecionada['rodadaTentativas']);
       setState(() {
-        _nivel = estavaNaEtapaAtual ? novoNivel : _nivel;
         _nivelAtual = novoNivel;
-        _tentativasNoNivel = _nivel == novoNivel
-            ? _numero(progresso['tentativasTeoriaNivel'])
-            : _numero(etapaSelecionada['tentativas']) % 10;
-        _questao = _sortearQuestao();
-        _respostaSelecionada = null;
-        _acertou = null;
+        _proximoNivel = nivelSeguinte;
+        _tentativasProximoNivel = tentativasSeguinte;
         _respondendo = false;
-        _tempoQuestao
-          ..reset()
-          ..start();
       });
     } catch (_) {
       if (!mounted) return;
@@ -209,6 +220,8 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
         _respondendo = false;
         _respostaSelecionada = null;
         _acertou = null;
+        _mostrarDica = false;
+        _mostrarExplicacao = false;
         _tempoQuestao
           ..reset()
           ..start();
@@ -221,6 +234,32 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
         ),
       );
     }
+  }
+
+  void _avancarQuestao() {
+    if (_proximoNivel != _nivel) {
+      _revisaoPendente.clear();
+      _questoesAteRevisao = 0;
+      _revisandoErro = false;
+    } else if (_revisandoErro) {
+      if (_revisaoPendente.isNotEmpty) _revisaoPendente.removeAt(0);
+      _revisandoErro = false;
+      _questoesAteRevisao = _revisaoPendente.isEmpty ? 0 : 1;
+    } else if (_revisaoPendente.isNotEmpty && _questoesAteRevisao > 0) {
+      _questoesAteRevisao--;
+    }
+    setState(() {
+      _nivel = _proximoNivel;
+      _tentativasNoNivel = _tentativasProximoNivel;
+      _questao = _sortearQuestao();
+      _respostaSelecionada = null;
+      _acertou = null;
+      _mostrarDica = false;
+      _mostrarExplicacao = false;
+      _tempoQuestao
+        ..reset()
+        ..start();
+    });
   }
 
   @override
@@ -273,11 +312,29 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
                   children: [
                     _buildProgresso(),
                     const SizedBox(height: 12),
-                    _buildPergunta(),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 240),
+                      switchInCurve: Curves.easeOutCubic,
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.025),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      ),
+                      child: _buildPergunta(),
+                    ),
                     const SizedBox(height: 12),
                     _buildOpcoes(),
                     const SizedBox(height: 10),
-                    _buildFeedback(),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      child: _buildFeedback(),
+                    ),
                   ],
                 ),
               ),
@@ -341,6 +398,7 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
 
   Widget _buildPergunta() {
     return Container(
+      key: ValueKey('${_questao.id}-$_revisandoErro'),
       width: double.infinity,
       padding: const EdgeInsets.all(21),
       decoration: BoxDecoration(
@@ -358,7 +416,7 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
             child: Text(
               _questao.category,
               style: const TextStyle(
-                color: Color(0xFF0B756A),
+                color: Color(0xFF70502E),
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -415,7 +473,9 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _respondendo ? null : () => _responder(opcao),
+            onPressed: _respondendo || _respostaSelecionada != null
+                ? null
+                : () => _responder(opcao),
             style: ElevatedButton.styleFrom(
               backgroundColor: fundo,
               disabledBackgroundColor: fundo,
@@ -452,26 +512,109 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
   );
 
   Widget _buildFeedback() {
-    if (_acertou == null) return const SizedBox(height: 40);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: _acertou! ? Colors.green : Colors.red,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Text(
-        _acertou!
-            ? 'Correto! +10 XP'
-            : 'Resposta incorreta. A resposta correta está marcada acima.',
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_respostaSelecionada == null) ...[
+          OutlinedButton.icon(
+            onPressed: _respondendo
+                ? null
+                : () => setState(() => _mostrarDica = !_mostrarDica),
+            icon: const Icon(Icons.lightbulb_outline),
+            label: Text(_mostrarDica ? 'Ocultar dica' : 'Preciso de uma dica'),
+          ),
+          if (_mostrarDica) _cartaoAprendizado(_questao.hint, Icons.lightbulb),
+        ],
+        if (_acertou != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: _acertou! ? Colors.green : Colors.red,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              _acertou!
+                  ? 'Correto! +10 XP'
+                  : 'Vamos aprender com essa resposta. A alternativa correta está marcada.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () =>
+                setState(() => _mostrarExplicacao = !_mostrarExplicacao),
+            icon: const Icon(Icons.menu_book_outlined),
+            label: Text(
+              _mostrarExplicacao
+                  ? 'Ocultar explicação'
+                  : 'Por que essa resposta?',
+            ),
+          ),
+          if (_mostrarExplicacao)
+            _cartaoAprendizado(_questao.explanation, Icons.school_outlined),
+          if (_revisaoPendente.isNotEmpty && !_revisandoErro)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Vamos retomar este conceito em uma próxima questão.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ),
+          if (_proximoNivel > _nivel) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Fase concluída! A próxima etapa foi desbloqueada.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _verde, fontWeight: FontWeight.bold),
+            ),
+          ],
+          if (_respondendo)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: CircularProgressIndicator(color: _verde),
+              ),
+            )
+          else
+            FilledButton.icon(
+              onPressed: _avancarQuestao,
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Próxima questão'),
+            ),
+        ],
+      ],
     );
   }
+
+  Widget _cartaoAprendizado(String texto, IconData icone) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: _verde.withValues(alpha: 0.6)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icone, color: const Color(0xFF70502E)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            texto,
+            style: const TextStyle(color: _preto, height: 1.35),
+          ),
+        ),
+      ],
+    ),
+  );
 
   int _numero(dynamic valor) => valor is num ? valor.toInt() : 0;
 }

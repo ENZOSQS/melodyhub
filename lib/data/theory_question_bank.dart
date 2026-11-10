@@ -1,3 +1,366 @@
+typedef TheoryLearningNote = ({String hint, String explanation});
+
+const theoryLearningNotes = <String, TheoryLearningNote>{
+  'bas_01': (
+    hint:
+        'Conte apenas as notas sem sustenido ou bemol; não conte as teclas pretas.',
+    explanation:
+        'A sequência natural tem sete nomes: Dó, Ré, Mi, Fá, Sol, Lá e Si. As alterações criam outras alturas, mas não novos nomes naturais.',
+  ),
+  'bas_02': (
+    hint: 'Recite a sequência natural na ordem, sem pular nomes.',
+    explanation:
+        'Na ordem Dó, Ré, Mi, Fá, Sol, Lá, Si, Fá vem imediatamente depois de Mi.',
+  ),
+  'bas_03': (
+    hint: 'Pense no nome natural que aparece logo antes de Sol.',
+    explanation:
+        'A sequência natural ascendente passa por Fá antes de chegar a Sol.',
+  ),
+  'bas_04': (
+    hint: 'A escala natural começa em Dó e alterna os nomes até Si.',
+    explanation:
+        'A ordem das sete notas naturais é Dó, Ré, Mi, Fá, Sol, Lá e Si; depois dela, a sequência recomeça em Dó na oitava seguinte.',
+  ),
+  'bas_05': (
+    hint:
+        'Lembre-se do símbolo que costuma marcar a região mais aguda da pauta.',
+    explanation:
+        'A clave de sol marca a nota Sol na segunda linha da pauta e é muito usada para registros agudos, inclusive na mão direita do piano.',
+  ),
+  'bas_06': (
+    hint: 'Pense na clave que marca a nota Fá na quarta linha da pauta.',
+    explanation:
+        'A clave de fá marca Fá na quarta linha e é comum para registros graves e para a mão esquerda do piano.',
+  ),
+  'bas_07': (
+    hint:
+        'Na escala natural, procure as duas passagens sem tecla preta entre notas vizinhas.',
+    explanation:
+        'Mi–Fá e Si–Dó são semitons naturais. Entre as outras notas naturais vizinhas há um tom.',
+  ),
+  'bas_08': (
+    hint:
+        'No 4/4, o número de cima indica quantas unidades de semínima cabem no compasso.',
+    explanation:
+        'Em 4/4 há quatro tempos de semínima por compasso; o 4 de baixo indica a semínima como unidade de referência.',
+  ),
+  'bas_09': (
+    hint: 'Use a contagem comum “1, 2, 3, 4” de um compasso simples.',
+    explanation:
+        'Na contagem usual do compasso 4/4, cada semínima ocupa um tempo.',
+  ),
+  'bas_10': (
+    hint: 'Uma pausa afeta o som e também tem uma duração escrita.',
+    explanation:
+        'A pausa é um símbolo de silêncio com duração definida; ela não representa uma nota mais aguda nem uma mudança de instrumento.',
+  ),
+  'bas_11': (
+    hint: 'Pense no elemento que organiza a música ao longo do tempo.',
+    explanation:
+        'O ritmo organiza a duração e a sequência de sons e silêncios.',
+  ),
+  'bas_12': (
+    hint: 'Compare a frequência do som, não seu volume ou quanto ele dura.',
+    explanation:
+        'A altura distingue sons graves e agudos e está relacionada à frequência: frequências menores soam mais graves.',
+  ),
+  'bas_13': (
+    hint:
+        'Entre Dó e Ré existe uma tecla preta; cada tecla vizinha representa um semitom.',
+    explanation:
+        'Dó–Dó sustenido é um semitom e Dó sustenido–Ré é outro; por isso, Dó e Ré ficam a dois semitons de distância.',
+  ),
+  'bas_14': (
+    hint: 'A tônica dá nome à escala maior.',
+    explanation:
+        'A escala de Dó maior começa na tônica Dó e segue Dó, Ré, Mi, Fá, Sol, Lá e Si.',
+  ),
+  'bas_15': (
+    hint:
+        'Imagine dois instrumentos tocando a mesma nota e com o mesmo volume.',
+    explanation:
+        'O timbre é a característica que ajuda a distinguir fontes sonoras diferentes mesmo quando tocam a mesma altura.',
+  ),
+  'int_01': (
+    hint: 'A escala maior tem semitons entre os graus 3–4 e 7–8.',
+    explanation:
+        'A fórmula da escala maior é tom, tom, semitom, tom, tom, tom, semitom (T–T–ST–T–T–T–ST).',
+  ),
+  'int_02': (
+    hint: 'Dó maior é a tonalidade de referência sem sustenidos nem bemóis.',
+    explanation:
+        'A armadura de Dó maior não tem alterações; por isso, sua escala usa apenas as notas naturais.',
+  ),
+  'int_03': (
+    hint: 'A ordem dos sustenidos começa por Fá.',
+    explanation: 'Sol maior tem um sustenido na armadura: Fá sustenido.',
+  ),
+  'int_04': (
+    hint: 'A ordem dos bemóis começa por Si.',
+    explanation: 'Fá maior tem um bemol na armadura: Si bemol.',
+  ),
+  'int_05': (
+    hint:
+        'A armadura de Ré maior tem dois sustenidos; consulte a ordem padrão deles.',
+    explanation:
+        'Ré maior tem Fá sustenido e Dó sustenido, os dois primeiros sustenidos da ordem Fá–Dó–Sol–Ré–Lá–Mi–Si.',
+  ),
+  'int_06': (
+    hint: 'Conte os semitons de uma nota até a mesma nota na oitava seguinte.',
+    explanation: 'No sistema temperado, uma oitava contém doze semitons.',
+  ),
+  'int_07': (
+    hint:
+        'Uma quinta justa equivale a sete teclas vizinhas contando os semitons entre as notas.',
+    explanation:
+        'A quinta justa corresponde a sete semitons no sistema temperado.',
+  ),
+  'int_08': (
+    hint:
+        'Uma tríade usa a fundamental, uma terça e uma quinta; a terça maior define sua qualidade.',
+    explanation:
+        'Na escala maior, uma tríade maior usa os graus 1, 3 e 5: fundamental, terça maior e quinta justa.',
+  ),
+  'int_09': (
+    hint:
+        'Compare a distância da fundamental até a terça em acordes maiores e menores.',
+    explanation:
+        'A terça menor fica a três semitons da fundamental e dá à tríade menor sua qualidade característica.',
+  ),
+  'int_10': (
+    hint:
+        'A relativa menor compartilha a armadura e começa no sexto grau da escala maior.',
+    explanation:
+        'Lá menor é a relativa de Dó maior: ambas usam as mesmas notas naturais, mas têm tônicas diferentes.',
+  ),
+  'int_11': (
+    hint:
+        'O número de cima da fórmula 3/4 informa quantos tempos há no compasso.',
+    explanation:
+        'Em 3/4, cada compasso reúne três tempos, normalmente contados em semínimas.',
+  ),
+  'int_12': (
+    hint:
+        'O símbolo de semínima indica qual valor rítmico está sendo marcado por minuto.',
+    explanation:
+        'A indicação ♩ = 120 significa 120 semínimas, ou batidas, por minuto.',
+  ),
+  'int_13': (
+    hint:
+        'No teclado, pense no movimento para a tecla imediatamente à direita.',
+    explanation: 'Um sustenido eleva a nota escrita em um semitom.',
+  ),
+  'int_14': (
+    hint:
+        'No teclado, pense no movimento para a tecla imediatamente à esquerda.',
+    explanation: 'Um bemol abaixa a nota escrita em um semitom.',
+  ),
+  'int_15': (
+    hint: 'Na síncope, a acentuação não coincide com o pulso forte esperado.',
+    explanation:
+        'A síncope desloca a ênfase para uma parte fraca do tempo ou do compasso, criando sensação de deslocamento rítmico.',
+  ),
+  'ava_01': (
+    hint:
+        'Compare a escala menor harmônica com a menor natural no sétimo grau.',
+    explanation:
+        'A menor harmônica eleva o sétimo grau da menor natural para criar uma sensível e reforçar a atração pela tônica.',
+  ),
+  'ava_02': (
+    hint:
+        'Na forma tradicional, a menor melódica muda ao subir; pense nos graus próximos à tônica.',
+    explanation:
+        'Na menor melódica tradicional ascendente, os graus 6 e 7 são elevados em relação à menor natural; na descida, costuma-se usar a forma natural.',
+  ),
+  'ava_03': (
+    hint: 'O trítono divide a oitava em duas partes iguais.',
+    explanation:
+        'O trítono mede seis semitons, metade dos doze semitons da oitava.',
+  ),
+  'ava_04': (
+    hint:
+        'O acorde dominante com sétima combina uma tríade maior com uma sétima menor.',
+    explanation:
+        'A tétrade dominante é formada por 1, 3, 5 e ♭7: fundamental, terça maior, quinta justa e sétima menor.',
+  ),
+  'ava_05': (
+    hint: 'Observe qual nota do acorde está na posição mais grave.',
+    explanation:
+        'Uma inversão acontece quando uma nota diferente da fundamental fica no baixo; a qualidade do acorde continua a mesma.',
+  ),
+  'ava_06': (
+    hint:
+        'Use a frase mnemônica em que cada novo sustenido sobe uma quinta em relação ao anterior.',
+    explanation:
+        'A ordem convencional dos sustenidos é Fá, Dó, Sol, Ré, Lá, Mi e Si.',
+  ),
+  'ava_07': (
+    hint:
+        'Dó sustenido maior fica no extremo das tonalidades com sustenidos da escala maior.',
+    explanation:
+        'Dó sustenido maior tem sete sustenidos: Fá, Dó, Sol, Ré, Lá, Mi e Si.',
+  ),
+  'ava_08': (
+    hint: 'Em 6/8, conte seis colcheias agrupadas em dois conjuntos de três.',
+    explanation:
+        'O compasso composto 6/8 costuma ser sentido em dois tempos principais, cada um subdividido em três colcheias.',
+  ),
+  'ava_09': (
+    hint: 'Uma cadência autêntica caminha da função dominante para a tônica.',
+    explanation:
+        'A cadência autêntica é o movimento V–I, que conduz da dominante ao acorde de tônica.',
+  ),
+  'ava_10': (
+    hint: 'Em Dó maior, Sol é o quinto grau e contém a sensível Si.',
+    explanation:
+        'O acorde de Sol maior é o V grau de Dó maior e exerce função dominante, criando expectativa de resolução em Dó.',
+  ),
+  'ava_11': (
+    hint: 'Comece em Ré e use somente teclas brancas até o próximo Ré.',
+    explanation:
+        'Ré–Mi–Fá–Sol–Lá–Si–Dó–Ré tem a fórmula de tons e semitons do modo dórico.',
+  ),
+  'ava_12': (
+    hint: 'O modo tem uma quarta um semitom acima da quarta justa.',
+    explanation:
+        'O modo lídio se distingue pelo quarto grau elevado (quarta aumentada) em relação à tônica.',
+  ),
+  'ava_13': (
+    hint:
+        'Pense em duas grafias diferentes para a mesma tecla no teclado temperado.',
+    explanation:
+        'Notas enarmônicas têm nomes e grafias diferentes, mas soam na mesma altura no sistema temperado, como Fá sustenido e Sol bemol.',
+  ),
+  'ava_14': (
+    hint:
+        'Imagine tocar a mesma melodia começando em outra nota, mantendo seus contornos.',
+    explanation:
+        'Transpor muda as alturas absolutas, mas mantém as distâncias entre as notas para preservar a identidade intervalar da melodia.',
+  ),
+  'ava_15': (
+    hint: 'A sensível é o grau que fica imediatamente abaixo da tônica.',
+    explanation:
+        'Na escala maior, o sétimo grau está a um semitom da tônica e tende a resolver nela.',
+  ),
+  'av2_01': (
+    hint:
+        'Monte os acordes da escala de Dó maior usando apenas notas da tonalidade.',
+    explanation:
+        'O acorde sobre o segundo grau de Dó maior usa Ré–Fá–Lá, formando Ré menor, representado por ii.',
+  ),
+  'av2_02': (
+    hint:
+        'A cadência plagal costuma ser chamada de “amém” e termina na tônica.',
+    explanation:
+        'Em Dó maior, Fá é o acorde IV e Dó é o I; o movimento IV–I caracteriza a cadência plagal.',
+  ),
+  'av2_03': (
+    hint:
+        'A tríade diminuta diatônica sobre o sétimo grau usa terças empilhadas dentro de Dó maior.',
+    explanation:
+        'Sobre Si em Dó maior, as notas Si–Ré–Fá formam uma terça menor e uma quinta diminuta, características da tríade diminuta.',
+  ),
+  'av2_04': (
+    hint:
+        'Na fórmula 6/8, o número de cima conta as unidades indicadas pelo 8.',
+    explanation:
+        'O 6/8 contém seis colcheias por compasso, normalmente agrupadas como dois tempos compostos de três colcheias.',
+  ),
+  'av2_05': (
+    hint: 'Na primeira inversão, a terça do acorde fica no baixo.',
+    explanation:
+        'A tríade de Dó maior tem Dó–Mi–Sol. Na primeira inversão, Mi é a nota mais grave.',
+  ),
+  'av2_06': (
+    hint:
+        'Sol7 é um acorde de quatro notas; a sétima fica um tom abaixo da oitava.',
+    explanation:
+        'Sol7 contém fundamental Sol, terça maior Si, quinta justa Ré e sétima menor Fá.',
+  ),
+  'av2_07': (
+    hint:
+        'Antes da dominante, muitas progressões usam a função que cria movimento para longe da tônica.',
+    explanation:
+        'A função subdominante, também chamada predominante em muitos contextos, prepara com frequência a dominante.',
+  ),
+  'av2_08': (
+    hint:
+        'A armadura vale para a tonalidade e afeta certas notas ao longo da peça.',
+    explanation:
+        'A armadura de clave indica quais notas são alteradas de forma recorrente pela tonalidade, evitando repetir esses sinais em cada ocorrência.',
+  ),
+  'av2_09': (
+    hint:
+        'Compare as três notas com a tríade maior de Lá: a terça é que muda sua qualidade.',
+    explanation:
+        'Lá–Dó–Mi reúne fundamental, terça menor e quinta justa, formando a tríade de Lá menor.',
+  ),
+  'av2_10': (
+    hint: 'A ordem dos bemóis é Si, Mi, Lá, Ré, Sol, Dó, Fá.',
+    explanation: 'Mi bemol maior tem três bemóis na armadura: Si, Mi e Lá.',
+  ),
+  'esp_01': (
+    hint:
+        'A sétima da dominante tende a resolver no acorde cuja tônica está uma quarta acima.',
+    explanation:
+        'Em Dó maior, Sol7 é V7 e resolve com frequência em Dó maior (I), movimento V7–I.',
+  ),
+  'esp_02': (
+    hint: 'A menor harmônica eleva o sétimo grau da escala natural.',
+    explanation:
+        'Em Lá menor harmônica, o sétimo grau Sol é elevado para Sol sustenido, a sensível que conduz a Lá.',
+  ),
+  'esp_03': (
+    hint:
+        'O modo frígio começa como uma escala menor com uma alteração característica no segundo grau.',
+    explanation:
+        'O segundo grau menor, a um semitom da tônica, é a característica mais reconhecível do modo frígio.',
+  ),
+  'esp_04': (
+    hint:
+        'Considere como duas linhas melódicas independentes soam quando avançam em quintas paralelas.',
+    explanation:
+        'Na prática tradicional de contraponto, quintas paralelas podem fazer as vozes soarem fundidas, reduzindo a independência entre as linhas.',
+  ),
+  'esp_05': (
+    hint:
+        'Comece com uma tríade menor e abaixe a quinta; depois acrescente uma sétima menor.',
+    explanation:
+        'A tétrade meio-diminuta tem fundamental, terça menor, quinta diminuta e sétima menor: 1–♭3–♭5–♭7.',
+  ),
+  'esp_06': (
+    hint:
+        'A dominante secundária de Ré é o acorde construído uma quinta justa acima de Ré.',
+    explanation:
+        'Lá maior ou Lá7 contém Dó sustenido, que conduz a Ré; por isso, funciona como V/ii em Dó maior.',
+  ),
+  'esp_07': (
+    hint:
+        'Leia as letras da forma como seções musicais: A, depois B, depois A novamente.',
+    explanation:
+        'Na forma ABA, a seção final retoma o material temático da seção A, às vezes com variações.',
+  ),
+  'esp_08': (
+    hint:
+        'Um intervalo composto ultrapassa uma oitava; retire uma oitava para achar o intervalo simples correspondente.',
+    explanation:
+        'Uma nona maior equivale a uma oitava justa mais uma segunda maior, totalizando 14 semitons.',
+  ),
+  'esp_09': (
+    hint:
+        'Compare a terça maior e a sétima menor do acorde dominante com os modos diatônicos.',
+    explanation:
+        'O modo mixolídio tem fórmula 1–2–3–4–5–6–♭7, que combina com a tríade maior e a sétima menor de um acorde dominante.',
+  ),
+  'esp_10': (
+    hint:
+        'Na cadência deceptiva, a dominante evita o acorde esperado de tônica.',
+    explanation:
+        'Em tonalidade maior, V–vi é deceptiva porque a dominante resolve no sexto grau em vez de chegar ao I.',
+  ),
+};
+
 class TheoryQuestion {
   const TheoryQuestion({
     required this.id,
@@ -14,6 +377,14 @@ class TheoryQuestion {
   final List<String> options;
   final String answer;
   final int difficulty;
+
+  String get hint =>
+      theoryLearningNotes[id]?.hint ??
+      'Lembre-se do conceito de $category e tente relacioná-lo ao enunciado.';
+
+  String get explanation =>
+      theoryLearningNotes[id]?.explanation ??
+      'A resposta correta é $answer. Revise o conceito de $category para reconhecer esse padrão em outros exercícios.';
 }
 
 /// Banco local para ampliar e revisar questões sem acoplar conteúdo à tela.
@@ -31,7 +402,8 @@ const theoryQuestionBank = <TheoryQuestion>[
   TheoryQuestion(
     id: 'bas_02',
     category: 'Notas',
-    prompt: 'Qual nota vem imediatamente depois de Mi?',
+    prompt:
+        'Na sequência ascendente das sete notas naturais, qual nota vem depois de Mi?',
     options: ['Ré', 'Fá', 'Sol', 'Lá'],
     answer: 'Fá',
     difficulty: 1,
@@ -39,7 +411,8 @@ const theoryQuestionBank = <TheoryQuestion>[
   TheoryQuestion(
     id: 'bas_03',
     category: 'Notas',
-    prompt: 'Qual nota vem imediatamente antes de Sol?',
+    prompt:
+        'Na sequência ascendente das sete notas naturais, qual nota vem antes de Sol?',
     options: ['Mi', 'Fá', 'Lá', 'Si'],
     answer: 'Fá',
     difficulty: 1,
@@ -147,9 +520,9 @@ const theoryQuestionBank = <TheoryQuestion>[
   TheoryQuestion(
     id: 'bas_13',
     category: 'Teclado',
-    prompt: 'Quais teclas brancas vizinhas formam um semitom natural?',
-    options: ['Dó e Ré', 'Ré e Mi', 'Mi e Fá', 'Fá e Sol'],
-    answer: 'Mi e Fá',
+    prompt: 'No teclado, quantos semitons separam Dó de Ré?',
+    options: ['Um', 'Dois', 'Três', 'Quatro'],
+    answer: 'Dois',
     difficulty: 1,
   ),
   TheoryQuestion(
@@ -187,7 +560,7 @@ const theoryQuestionBank = <TheoryQuestion>[
   TheoryQuestion(
     id: 'int_02',
     category: 'Tonalidades',
-    prompt: 'Quantos acidentes aparecem na armadura de Dó maior?',
+    prompt: 'Quantos sustenidos ou bemóis há na armadura de Dó maior?',
     options: ['Nenhum', 'Um sustenido', 'Um bemol', 'Dois sustenidos'],
     answer: 'Nenhum',
     difficulty: 2,
@@ -407,7 +780,7 @@ const theoryQuestionBank = <TheoryQuestion>[
     id: 'ava_08',
     category: 'Ritmo',
     prompt:
-        'Em uma fórmula 6/8 simples, quantos tempos compostos são sentidos normalmente por compasso?',
+        'Em um compasso composto 6/8, quantos tempos principais são sentidos normalmente?',
     options: ['Dois', 'Três', 'Seis', 'Oito'],
     answer: 'Dois',
     difficulty: 3,
@@ -524,31 +897,32 @@ const theoryQuestionBank = <TheoryQuestion>[
   TheoryQuestion(
     id: 'av2_04',
     category: 'Ritmo',
-    prompt: 'Em 6/8, qual figura normalmente recebe cada subdivisão principal?',
-    options: ['Colcheia', 'Semínima pontuada', 'Mínima', 'Semibreve'],
-    answer: 'Colcheia',
+    prompt: 'Quantas colcheias compõem um compasso de 6/8?',
+    options: ['Três', 'Quatro', 'Seis', 'Oito'],
+    answer: 'Seis',
     difficulty: 4,
   ),
   TheoryQuestion(
     id: 'av2_05',
-    category: 'Intervalos',
-    prompt: 'Quantos semitons formam uma quinta justa no sistema temperado?',
-    options: ['5', '6', '7', '8'],
-    answer: '7',
+    category: 'Acordes',
+    prompt:
+        'Qual nota fica no baixo de um acorde de Dó maior em primeira inversão?',
+    options: ['Dó', 'Mi', 'Sol', 'Si'],
+    answer: 'Mi',
     difficulty: 4,
   ),
   TheoryQuestion(
     id: 'av2_06',
-    category: 'Escalas',
+    category: 'Acordes',
     prompt:
-        'Qual nota diferencia principalmente a escala menor harmônica da menor natural?',
+        'Quais notas formam o acorde de Sol com sétima da dominante (Sol7)?',
     options: [
-      'Sétimo grau elevado',
-      'Segundo grau elevado',
-      'Quarto grau abaixado',
-      'Sexto grau elevado',
+      'Sol, Si, Ré e Fá',
+      'Sol, Si, Ré e Fá sustenido',
+      'Sol, Si bemol, Ré e Fá',
+      'Sol, Dó, Ré e Fá',
     ],
-    answer: 'Sétimo grau elevado',
+    answer: 'Sol, Si, Ré e Fá',
     difficulty: 4,
   ),
   TheoryQuestion(
@@ -563,23 +937,22 @@ const theoryQuestionBank = <TheoryQuestion>[
   TheoryQuestion(
     id: 'av2_08',
     category: 'Notação',
-    prompt: 'O que indica um bemol junto à clave em uma armadura?',
+    prompt: 'O que informa a armadura de clave de uma peça?',
     options: [
-      'Quais notas serão abaixadas ao longo da peça',
+      'Quais notas recebem alterações recorrentes ao longo da peça',
       'Que a peça deve ser tocada suave',
       'Que todas as notas duram metade',
       'Que a tonalidade é necessariamente menor',
     ],
-    answer: 'Quais notas serão abaixadas ao longo da peça',
+    answer: 'Quais notas recebem alterações recorrentes ao longo da peça',
     difficulty: 4,
   ),
   TheoryQuestion(
     id: 'av2_09',
     category: 'Acordes',
-    prompt:
-        'Qual intervalo existe entre a fundamental e a terça de uma tríade menor?',
-    options: ['Terça menor', 'Terça maior', 'Quarta justa', 'Quinta diminuta'],
-    answer: 'Terça menor',
+    prompt: 'Qual acorde é formado pelas notas Lá, Dó e Mi?',
+    options: ['Lá maior', 'Lá menor', 'Dó maior', 'Mi diminuto'],
+    answer: 'Lá menor',
     difficulty: 4,
   ),
   TheoryQuestion(
@@ -702,7 +1075,7 @@ const theoryQuestionBank = <TheoryQuestion>[
     id: 'esp_09',
     category: 'Escalas',
     prompt:
-        'Qual escala contém simultaneamente terça menor e sétima menor e é comum sobre acorde dominante?',
+        'Qual modo diatônico se ajusta à tríade maior com sétima menor de um acorde dominante?',
     options: ['Mixolídia', 'Lídia', 'Jônia', 'Dórica'],
     answer: 'Mixolídia',
     difficulty: 5,

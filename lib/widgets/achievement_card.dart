@@ -76,7 +76,7 @@ class AchievementCard extends StatelessWidget {
                         Icons.account_circle_outlined,
                         size: 15,
                         color: desbloqueada
-                            ? const Color(0xFF16D9C5)
+                            ? const Color(0xFFE9B96E)
                             : Colors.white38,
                       ),
                       const SizedBox(width: 5),

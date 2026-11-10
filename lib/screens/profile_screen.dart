@@ -1,11 +1,17 @@
 // lib/screens/profile_screen.dart
 
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../data/profile_icon_rewards.dart';
 import '../services/progress_service.dart';
+import '../services/app_preferences.dart';
+import '../services/reminder_service.dart';
 import '../theme/app_theme.dart';
 import 'icon_shop_screen.dart';
 
@@ -17,7 +23,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const Color verde = Color(0xFF16D9C5);
+  static const Color verde = Color(0xFFE9B96E);
 
   final ProgressService _service = ProgressService();
 
@@ -25,11 +31,152 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _editando = false;
   bool _salvando = false;
+  bool _enviandoFoto = false;
+  bool _rotulosTeclado = true;
+  bool _lembreteAtivo = false;
+  int _bpm = 80;
+  String _tipoNota = 'solfejo';
+  TimeOfDay _horaLembrete = const TimeOfDay(hour: 19, minute: 0);
 
   @override
   void dispose() {
     _nomeController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarPreferencias();
+  }
+
+  Future<void> _carregarPreferencias() async {
+    final result = await Future.wait([
+      AppPreferences.noteType(),
+      AppPreferences.showKeyboardLabels(),
+      AppPreferences.defaultBpm(),
+      AppPreferences.reminderEnabled(),
+      AppPreferences.reminderTime(),
+    ]);
+    if (!mounted) return;
+    final time = result[4] as ({int hour, int minute});
+    setState(() {
+      _tipoNota = result[0] as String;
+      _rotulosTeclado = result[1] as bool;
+      _bpm = result[2] as int;
+      _lembreteAtivo = result[3] as bool;
+      _horaLembrete = TimeOfDay(hour: time.hour, minute: time.minute);
+    });
+  }
+
+  Future<void> _escolherFoto() async {
+    final usuario = FirebaseAuth.instance.currentUser;
+    if (usuario == null || _enviandoFoto) return;
+    try {
+      final image = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 900,
+        imageQuality: 82,
+      );
+      if (image == null) return;
+      setState(() => _enviandoFoto = true);
+      final Uint8List bytes = await image.readAsBytes();
+      final isPng =
+          image.mimeType == 'image/png' ||
+          image.name.toLowerCase().endsWith('.png');
+      final extension = isPng ? 'png' : 'jpg';
+      final ref = FirebaseStorage.instance.ref(
+        'profilePhotos/${usuario.uid}/avatar.$extension',
+      );
+      await ref.putData(
+        bytes,
+        SettableMetadata(contentType: isPng ? 'image/png' : 'image/jpeg'),
+      );
+      final url = await ref.getDownloadURL();
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .set({'fotoUrl': url}, SetOptions(merge: true));
+      await usuario.updatePhotoURL(url);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto de perfil atualizada.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível enviar a foto. Verifique o Firebase Storage e tente novamente.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enviandoFoto = false);
+    }
+  }
+
+  Future<void> _definirLembrete(bool ativo) async {
+    if (!ativo) {
+      await ReminderService.instance.cancelDaily();
+      await AppPreferences.setReminderEnabled(false);
+      if (mounted) setState(() => _lembreteAtivo = false);
+      return;
+    }
+    final permission = await ReminderService.instance.requestPermission();
+    if (!permission) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Permita notificações nas configurações do aparelho para ativar o lembrete.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    final ok = await ReminderService.instance.scheduleDaily(
+      hour: _horaLembrete.hour,
+      minute: _horaLembrete.minute,
+    );
+    if (ok) {
+      await AppPreferences.setReminderEnabled(true);
+      if (mounted) setState(() => _lembreteAtivo = true);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'O sistema não conseguiu agendar o lembrete neste dispositivo.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _escolherHora() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: _horaLembrete,
+    );
+    if (time == null) return;
+    setState(() => _horaLembrete = time);
+    await AppPreferences.setReminderTime(time.hour, time.minute);
+    if (_lembreteAtivo) {
+      final ok = await ReminderService.instance.scheduleDaily(
+        hour: time.hour,
+        minute: time.minute,
+      );
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível atualizar o horário do lembrete.'),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _salvarNome() async {
@@ -169,6 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final conquistas = List<String>.from(dados['conquistas'] ?? []);
           final iconePerfilId = dados['iconePerfilId'] as String?;
+          final fotoUrl = dados['fotoUrl'] as String? ?? usuario.photoURL;
 
           if (!_editando && _nomeController.text != nome.toString()) {
             _nomeController.text = nome.toString();
@@ -189,10 +337,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: AppColors.surfaceRaised,
-                          child: _iconePerfil(iconePerfilId),
+                        Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: AppColors.surfaceRaised,
+                              child: fotoUrl == null
+                                  ? _iconePerfil(iconePerfilId)
+                                  : ClipOval(
+                                      child: Image.network(
+                                        fotoUrl,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            _iconePerfil(iconePerfilId),
+                                      ),
+                                    ),
+                            ),
+                            IconButton.filled(
+                              onPressed: _enviandoFoto ? null : _escolherFoto,
+                              icon: _enviandoFoto
+                                  ? const SizedBox(
+                                      width: 17,
+                                      height: 17,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.photo_camera, size: 17),
+                              tooltip: 'Alterar foto de perfil',
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -235,6 +412,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 14),
                   _buildNome(),
                   const SizedBox(height: 14),
+                  _buildPreferencias(),
+                  const SizedBox(height: 14),
                   _buildDesempenho(
                     xp,
                     nivel,
@@ -271,6 +450,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
+  Widget _buildPreferencias() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(17),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Preferências de estudo',
+          style: TextStyle(
+            color: AppColors.text,
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text('Nomes das notas', style: TextStyle(color: AppColors.muted)),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'solfejo', label: Text('Dó–Ré–Mi')),
+            ButtonSegment(value: 'cifragem', label: Text('C–D–E')),
+          ],
+          selected: {_tipoNota},
+          onSelectionChanged: (values) {
+            final value = values.first;
+            setState(() => _tipoNota = value);
+            AppPreferences.setNoteType(value);
+          },
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text(
+            'Mostrar nomes no teclado',
+            style: TextStyle(color: AppColors.text),
+          ),
+          value: _rotulosTeclado,
+          onChanged: (value) {
+            setState(() => _rotulosTeclado = value);
+            AppPreferences.setShowKeyboardLabels(value);
+          },
+        ),
+        Text(
+          'BPM inicial dos exercícios de ritmo: $_bpm',
+          style: const TextStyle(color: AppColors.text),
+        ),
+        Slider(
+          value: _bpm.toDouble(),
+          min: 40,
+          max: 180,
+          divisions: 28,
+          label: '$_bpm BPM',
+          onChanged: (value) {
+            final bpm = value.round();
+            setState(() => _bpm = bpm);
+            AppPreferences.setDefaultBpm(bpm);
+          },
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text(
+            'Lembrete diário de estudo',
+            style: TextStyle(color: AppColors.text),
+          ),
+          subtitle: Text(
+            'Aviso local às ${_horaLembrete.format(context)}',
+            style: const TextStyle(color: AppColors.muted),
+          ),
+          value: _lembreteAtivo,
+          onChanged: _definirLembrete,
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _escolherHora,
+            icon: const Icon(Icons.schedule),
+            label: Text('Alterar horário · ${_horaLembrete.format(context)}'),
+          ),
+        ),
+        const Text(
+          'O lembrete fica salvo neste aparelho. A disponibilidade depende das permissões do sistema.',
+          style: TextStyle(color: AppColors.muted, fontSize: 12),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildNome() {
     return Container(

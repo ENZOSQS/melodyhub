@@ -1,9 +1,8 @@
-import 'dart:async';
 import 'dart:math';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
+import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 
 class ExercisesScreen extends StatefulWidget {
@@ -17,8 +16,12 @@ class ExercisesScreen extends StatefulWidget {
 
 class _ExercisesScreenState extends State<ExercisesScreen>
     with WidgetsBindingObserver {
-  static const Color _verde = Color(0xFF16D9C5);
-  static const Color _preto = Color(0xFF0A1020);
+  static const Color _verde = Color(0xFFE9B96E);
+  static const Color _preto = Color(0xFF171316);
+  static const Duration _duracaoNormal = Duration(milliseconds: 300);
+  static const Duration _duracaoLenta = Duration(milliseconds: 620);
+  static const Duration _pausaNormal = Duration(milliseconds: 55);
+  static const Duration _pausaLenta = Duration(milliseconds: 150);
   static const List<Map<String, String>> _notas = [
     {'nome': 'Dó', 'arquivo': 'C3.wav'},
     {'nome': 'Ré', 'arquivo': 'D3.wav'},
@@ -29,7 +32,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     {'nome': 'Si', 'arquivo': 'B3.wav'},
   ];
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final MusicAudioService _audio = MusicAudioService.instance;
   final ProgressService _progressService = ProgressService();
   final Random _random = Random();
   final Stopwatch _tempoQuestao = Stopwatch();
@@ -37,17 +40,29 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   int _nivel = 1;
   int _nivelAtual = 1;
   int _sequenciaAcertos = 0;
+  int _tentativasNoNivel = 0;
+  int _acertosNoNivel = 0;
+  int _proximoNivel = 1;
+  int _tentativasProximoNivel = 0;
+  int _acertosProximoNivel = 0;
+  int _sequenciaProxima = 0;
   bool _carregando = true;
   bool _respondendo = false;
   bool _reproduzindo = false;
   bool _emForeground = true;
   bool _mostrarFeedback = false;
+  bool _mostrarDica = false;
+  bool _mostrarExplicacao = false;
+  bool _audioLento = false;
   bool? _acertou;
   String? _erroInicializacao;
   List<Map<String, String>> _alvo = [];
   List<String> _respostas = [];
 
-  int get _tamanhoSequencia => _nivel == 1 ? 1 : _nivel + 1;
+  Duration get _duracaoNota => _audioLento ? _duracaoLenta : _duracaoNormal;
+  Duration get _pausaEntreNotas => _audioLento ? _pausaLenta : _pausaNormal;
+
+  int get _tamanhoSequencia => _nivel;
 
   @override
   void initState() {
@@ -63,7 +78,6 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tempoQuestao.stop();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -71,10 +85,15 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _emForeground = state == AppLifecycleState.resumed;
     if (_emForeground) {
-      if (!_carregando && !_respondendo) _tempoQuestao.start();
+      if (!_carregando &&
+          !_respondendo &&
+          !_reproduzindo &&
+          !_mostrarFeedback) {
+        _tempoQuestao.start();
+      }
     } else {
       _tempoQuestao.stop();
-      _audioPlayer.stop();
+      _audio.stopAll();
     }
   }
 
@@ -83,18 +102,33 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       final progresso = await _progressService.buscarProgresso();
       if (!mounted) return;
       final nivelAtual = _numero(progresso['nivelPratico']).clamp(1, 5).toInt();
+      final etapas = Map<String, dynamic>.from(
+        progresso['praticaEtapas'] as Map? ?? const <String, dynamic>{},
+      );
+      final etapa = Map<String, dynamic>.from(
+        etapas['${widget.nivelSelecionado ?? nivelAtual}'] as Map? ??
+            const <String, dynamic>{},
+      );
+      await _audio.preload(_notas.map((nota) => nota['arquivo']!));
+      if (!mounted) return;
       setState(() {
         _nivelAtual = nivelAtual;
+        _proximoNivel = nivelAtual;
         _nivel = (widget.nivelSelecionado ?? nivelAtual)
             .clamp(1, nivelAtual)
             .toInt();
         _sequenciaAcertos = _nivel == nivelAtual
             ? _numero(progresso['sequenciaAcertosPraticos'])
             : 0;
+        _tentativasNoNivel = _nivel == nivelAtual
+            ? _numero(progresso['tentativasPraticasNivel'])
+            : _numero(etapa['rodadaTentativas']);
+        _acertosNoNivel = _nivel == nivelAtual
+            ? _numero(progresso['acertosPraticasNivel'])
+            : _numero(etapa['rodadaAcertos']);
         _alvo = _sortearSequencia();
         _carregando = false;
       });
-      if (_emForeground) _tempoQuestao.start();
       WidgetsBinding.instance.addPostFrameCallback((_) => _tocarSequencia());
     } catch (_) {
       if (!mounted) return;
@@ -119,20 +153,13 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
   Future<void> _tocarSequencia() async {
     if (!mounted || _respondendo || _reproduzindo || _alvo.isEmpty) return;
+    _tempoQuestao.stop();
     setState(() => _reproduzindo = true);
     try {
       for (final nota in _alvo) {
-        if (!mounted) return;
-        await _audioPlayer.stop();
-        await _audioPlayer.play(AssetSource('sounds/${nota['arquivo']}'));
-        try {
-          await _audioPlayer.onPlayerComplete.first.timeout(
-            const Duration(seconds: 3),
-          );
-        } on TimeoutException {
-          await _audioPlayer.stop();
-        }
-        await Future<void>.delayed(const Duration(milliseconds: 180));
+        if (!mounted || !_emForeground) break;
+        await _audio.playFor(nota['arquivo']!, _duracaoNota);
+        await Future<void>.delayed(_pausaEntreNotas);
       }
     } catch (erro) {
       debugPrint('Erro ao reproduzir sequência: $erro');
@@ -144,12 +171,19 @@ class _ExercisesScreenState extends State<ExercisesScreen>
         );
       }
     } finally {
-      if (mounted) setState(() => _reproduzindo = false);
+      if (mounted) {
+        setState(() => _reproduzindo = false);
+        if (_emForeground && !_mostrarFeedback && !_respondendo) {
+          _tempoQuestao.start();
+        }
+      }
     }
   }
 
   void _receberNota(String resposta) {
-    if (_respondendo || _reproduzindo || _carregando) return;
+    if (_respondendo || _reproduzindo || _carregando || _mostrarFeedback) {
+      return;
+    }
     final indice = _respostas.length;
     if (indice >= _alvo.length) return;
     final respostas = [..._respostas, resposta];
@@ -162,13 +196,15 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
   Future<void> _registrarSequencia({required bool correta}) async {
     _tempoQuestao.stop();
-    final duracao = _tempoQuestao.elapsed.inSeconds;
+    final duracaoMs = _tempoQuestao.elapsed.inMilliseconds;
+    final duracao = (duracaoMs / 1000).ceil();
     final respostaCorreta = _alvo.map((nota) => nota['nome']).join(' – ');
     final respostaUsuario = _respostas.join(' – ');
     setState(() {
       _respondendo = true;
       _mostrarFeedback = true;
       _acertou = correta;
+      _mostrarExplicacao = !correta;
     });
     try {
       await _progressService.registrarExercicio(
@@ -183,35 +219,43 @@ class _ExercisesScreenState extends State<ExercisesScreen>
         questaoId: 'sequencia_notas_nivel_$_nivel',
         categoria: 'Memória auditiva',
         duracaoSegundos: duracao,
+        duracaoMilissegundos: duracaoMs,
       );
       final progresso = await _progressService.buscarProgresso();
       if (!mounted) return;
       final estavaNaEtapaAtual = _nivel == _nivelAtual;
-      await Future<void>.delayed(const Duration(milliseconds: 850));
-      if (!mounted) return;
+      final nivelAtual = _numero(progresso['nivelPratico']).clamp(1, 5).toInt();
+      final nivelSeguinte = estavaNaEtapaAtual ? nivelAtual : _nivel;
+      final etapas = Map<String, dynamic>.from(
+        progresso['praticaEtapas'] as Map? ?? const <String, dynamic>{},
+      );
+      final etapaSeguinte = Map<String, dynamic>.from(
+        etapas['$nivelSeguinte'] as Map? ?? const <String, dynamic>{},
+      );
+      final tentativasSeguintes = nivelSeguinte == nivelAtual
+          ? _numero(progresso['tentativasPraticasNivel'])
+          : _numero(etapaSeguinte['rodadaTentativas']);
+      final acertosSeguintes = nivelSeguinte == nivelAtual
+          ? _numero(progresso['acertosPraticasNivel'])
+          : _numero(etapaSeguinte['rodadaAcertos']);
       setState(() {
-        _nivelAtual = _numero(progresso['nivelPratico']).clamp(1, 5).toInt();
-        _nivel = estavaNaEtapaAtual ? _nivelAtual : _nivel;
+        _nivelAtual = nivelAtual;
+        _proximoNivel = nivelSeguinte;
+        _tentativasProximoNivel = tentativasSeguintes;
+        _acertosProximoNivel = acertosSeguintes;
         _sequenciaAcertos = estavaNaEtapaAtual
             ? _numero(progresso['sequenciaAcertosPraticos'])
             : 0;
-        _alvo = _sortearSequencia();
-        _respostas = [];
-        _mostrarFeedback = false;
-        _acertou = null;
+        _sequenciaProxima = _sequenciaAcertos;
         _respondendo = false;
-        _tempoQuestao
-          ..reset()
-          ..start();
-        if (!_emForeground) _tempoQuestao.stop();
       });
-      await Future<void>.delayed(const Duration(milliseconds: 150));
-      if (mounted && _emForeground) await _tocarSequencia();
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _respondendo = false;
         _mostrarFeedback = false;
+        _mostrarDica = false;
+        _mostrarExplicacao = false;
         _acertou = null;
         _respostas = [];
         _tempoQuestao
@@ -227,6 +271,49 @@ class _ExercisesScreenState extends State<ExercisesScreen>
         ),
       );
     }
+  }
+
+  Future<void> _avancarSequencia() async {
+    setState(() {
+      _nivel = _proximoNivel;
+      _tentativasNoNivel = _tentativasProximoNivel;
+      _acertosNoNivel = _acertosProximoNivel;
+      _sequenciaAcertos = _sequenciaProxima;
+      _alvo = _sortearSequencia();
+      _respostas = [];
+      _mostrarFeedback = false;
+      _mostrarDica = false;
+      _mostrarExplicacao = false;
+      _acertou = null;
+      _respondendo = false;
+      _tempoQuestao
+        ..reset()
+        ..start();
+      if (!_emForeground) _tempoQuestao.stop();
+    });
+    await Future<void>.delayed(_pausaEntreNotas);
+    if (mounted && _emForeground) await _tocarSequencia();
+  }
+
+  String get _explicacaoSequencia {
+    final correta = _alvo.map((nota) => nota['nome']).join(' → ');
+    if (_tamanhoSequencia == 1) {
+      return 'A nota tocada foi ${_alvo.first['nome']}. Compare a altura do som com as teclas do piano e cante junto para fixar a referência.';
+    }
+    if (_acertou == true) {
+      return 'Você manteve a ordem das notas: $correta. Agrupar a sequência em pequenos blocos ajuda a memória auditiva.';
+    }
+    var primeiraDiferenca = -1;
+    for (var i = 0; i < _respostas.length && i < _alvo.length; i++) {
+      if (_respostas[i] != _alvo[i]['nome']) {
+        primeiraDiferenca = i;
+        break;
+      }
+    }
+    if (primeiraDiferenca >= 0) {
+      return 'Na posição ${primeiraDiferenca + 1}, você tocou ${_respostas[primeiraDiferenca]}, mas o som era ${_alvo[primeiraDiferenca]['nome']}. A sequência completa era $correta. Tente cantar cada nota antes de repeti-la.';
+    }
+    return 'A sequência completa era $correta. Tente cantá-la em blocos de duas ou três notas antes de tocar.';
   }
 
   Color _corTecla(String nome) {
@@ -302,7 +389,27 @@ class _ExercisesScreenState extends State<ExercisesScreen>
                   children: [
                     _buildCabecalho(),
                     const SizedBox(height: 12),
-                    _buildRespostas(),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.97, end: 1).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            ),
+                          ),
+                          child: child,
+                        ),
+                      ),
+                      child: KeyedSubtree(
+                        key: ValueKey(
+                          '${_alvo.map((nota) => nota['nome']).join('|')}-${_respostas.join('|')}',
+                        ),
+                        child: _buildRespostas(),
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     _buildPiano(),
                     const SizedBox(height: 12),
@@ -315,7 +422,6 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   }
 
   Widget _buildCabecalho() {
-    final faltaParaAvancar = (_nivel * 3 - _sequenciaAcertos).clamp(0, 99);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(17),
@@ -325,7 +431,15 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       ),
       child: Column(
         children: [
-          const Icon(Icons.hearing, color: _preto, size: 34),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Icon(
+              key: ValueKey(_reproduzindo),
+              _reproduzindo ? Icons.graphic_eq_rounded : Icons.hearing_rounded,
+              color: _preto,
+              size: 34,
+            ),
+          ),
           const SizedBox(height: 7),
           Text(
             'Sequência auditiva — nível $_nivel',
@@ -347,10 +461,10 @@ class _ExercisesScreenState extends State<ExercisesScreen>
           if (_nivel < 5) ...[
             const SizedBox(height: 6),
             Text(
-              '$_sequenciaAcertos acertos seguidos · faltam $faltaParaAvancar para subir de nível',
+              '$_tentativasNoNivel/10 tentativas · $_acertosNoNivel acertos · mínimo de 7 para avançar',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Color(0xFF0B756A),
+                color: Color(0xFF70502E),
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
@@ -358,9 +472,9 @@ class _ExercisesScreenState extends State<ExercisesScreen>
           ] else ...[
             const SizedBox(height: 6),
             Text(
-              'Nível máximo · $_sequenciaAcertos acertos seguidos',
+              'Nível máximo · pratique para manter sua sequência de acertos',
               style: const TextStyle(
-                color: Color(0xFF0B756A),
+                color: Color(0xFF70502E),
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
@@ -386,6 +500,31 @@ class _ExercisesScreenState extends State<ExercisesScreen>
               ),
             ),
           ),
+          const SizedBox(height: 6),
+          ActionChip(
+            avatar: Icon(
+              _audioLento ? Icons.slow_motion_video : Icons.speed,
+              size: 18,
+            ),
+            label: Text(_audioLento ? 'Áudio mais lento' : 'Áudio normal'),
+            onPressed: _reproduzindo || _respondendo
+                ? null
+                : () => setState(() => _audioLento = !_audioLento),
+          ),
+          if (_tentativasNoNivel > 0 && _nivel < 5) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: _tentativasNoNivel / 10,
+                minHeight: 6,
+                backgroundColor: Colors.black12,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFF70502E),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -434,7 +573,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF050B1B),
+        color: const Color(0xFF100D10),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white12),
       ),
@@ -448,7 +587,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: GestureDetector(
-                  onTap: _respondendo || _reproduzindo
+                  onTap: _respondendo || _reproduzindo || _mostrarFeedback
                       ? null
                       : () => _receberNota(nome),
                   child: AnimatedContainer(
@@ -493,39 +632,124 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
   Widget _buildFeedback() {
     if (!_mostrarFeedback || _acertou == null) {
-      return const SizedBox(height: 42);
-    }
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: _acertou! ? Colors.green : Colors.red,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      return Column(
         children: [
-          Icon(
-            _acertou! ? Icons.check_circle : Icons.cancel,
-            color: Colors.white,
-            size: 23,
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              _acertou! ? 'Sequência correta! +10 XP' : 'Sequência incorreta',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+          OutlinedButton.icon(
+            onPressed: _reproduzindo || _respondendo
+                ? null
+                : () => setState(() => _mostrarDica = !_mostrarDica),
+            icon: const Icon(Icons.lightbulb_outline, color: _verde),
+            label: Text(
+              _mostrarDica ? 'Ocultar dica' : 'Preciso de uma dica',
+              style: const TextStyle(color: Colors.white),
             ),
           ),
+          if (_mostrarDica)
+            _cartaoAprendizado(
+              _tamanhoSequencia == 1
+                  ? 'Cante a nota e compare se ela é mais grave ou mais aguda que as notas que você já conhece. Você pode ouvir novamente.'
+                  : 'Cante a sequência em voz baixa e agrupe as notas em blocos de duas ou três. Você pode ouvir novamente antes de responder.',
+              Icons.lightbulb,
+            ),
         ],
-      ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: _acertou! ? Colors.green : const Color(0xFF9E3A48),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _acertou! ? Icons.check_circle : Icons.menu_book,
+                color: Colors.white,
+                size: 23,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  _acertou!
+                      ? 'Sequência correta! +10 XP'
+                      : 'Resposta incorreta. Vamos entender a sequência.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _reproduzindo || _respondendo
+              ? null
+              : () => setState(() => _mostrarExplicacao = !_mostrarExplicacao),
+          icon: const Icon(Icons.school_outlined, color: _verde),
+          label: Text(
+            _mostrarExplicacao ? 'Ocultar explicação' : 'Ver explicação',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        if (_mostrarExplicacao)
+          _cartaoAprendizado(_explicacaoSequencia, Icons.hearing),
+        if (_proximoNivel > _nivel)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Fase concluída! A próxima etapa foi desbloqueada.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _verde, fontWeight: FontWeight.bold),
+            ),
+          ),
+        if (_respondendo)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(color: _verde),
+            ),
+          )
+        else
+          FilledButton.icon(
+            onPressed: _avancarSequencia,
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Próxima sequência'),
+          ),
+      ],
     );
   }
+
+  Widget _cartaoAprendizado(String texto, IconData icone) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icone, color: const Color(0xFF70502E)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            texto,
+            style: const TextStyle(color: _preto, height: 1.35),
+          ),
+        ),
+      ],
+    ),
+  );
 
   int _numero(dynamic valor) => valor is num ? valor.toInt() : 0;
 }

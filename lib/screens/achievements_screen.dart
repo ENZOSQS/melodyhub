@@ -162,9 +162,9 @@ class AchievementsScreen extends StatelessWidget {
 
     if (usuario == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0A1020),
+        backgroundColor: const Color(0xFF171316),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF0A1020),
+          backgroundColor: const Color(0xFF171316),
           title: const Text('Conquistas'),
         ),
         body: const Center(
@@ -177,9 +177,9 @@ class AchievementsScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1020),
+      backgroundColor: const Color(0xFF171316),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A1020),
+        backgroundColor: const Color(0xFF171316),
         elevation: 0,
         title: const Text(
           'Conquistas',
@@ -210,7 +210,7 @@ class AchievementsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF121B2E),
+                  color: const Color(0xFF211C20),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white10),
                 ),

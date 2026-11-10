@@ -2,6 +2,26 @@
 cmake_minimum_required(VERSION 3.14)
 project(melodyhub LANGUAGES CXX)
 
+# flutter_local_notifications_windows uses ATL headers. Some machines select
+# the Build Tools instance as the CMake generator even when another installed
+# Visual Studio instance provides ATL. Add any installed MSVC ATL include
+# folder when present; this does not affect builds without ATL/plugin targets.
+if(MSVC)
+  file(GLOB MELODYHUB_ATL_INCLUDE_DIRS
+    "C:/Program Files/Microsoft Visual Studio/*/*/VC/Tools/MSVC/*/atlmfc/include"
+    "C:/Program Files (x86)/Microsoft Visual Studio/*/*/VC/Tools/MSVC/*/atlmfc/include")
+  foreach(ATL_INCLUDE_DIR IN LISTS MELODYHUB_ATL_INCLUDE_DIRS)
+    if(EXISTS "${ATL_INCLUDE_DIR}/atlbase.h")
+      include_directories(BEFORE SYSTEM "${ATL_INCLUDE_DIR}")
+      if(CMAKE_GENERATOR_PLATFORM STREQUAL "Win32")
+        link_directories(BEFORE "${ATL_INCLUDE_DIR}/../lib/x86")
+      else()
+        link_directories(BEFORE "${ATL_INCLUDE_DIR}/../lib/x64")
+      endif()
+    endif()
+  endforeach()
+endif()
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "melodyhub")

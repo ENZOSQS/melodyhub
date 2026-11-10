@@ -87,11 +87,6 @@ class _RegisterPageState extends State<RegisterPage> {
           content: Text('Conta criada com sucesso! Faça login para continuar.'),
         ),
       );
-
-      print('Usuário criado com sucesso!');
-      print('UID: ${usuario.uid}');
-      print('Nome: $nome');
-      print('E-mail: $email');
     } on FirebaseAuthException catch (e) {
       String mensagem = 'Não foi possível criar a conta.';
 
@@ -109,9 +104,9 @@ class _RegisterPageState extends State<RegisterPage> {
         context,
       ).showSnackBar(SnackBar(content: Text(mensagem)));
 
-      print('Erro Firebase Auth: ${e.code}');
+      debugPrint('Falha ao criar conta: ${e.code}');
     } catch (e) {
-      print('Erro: $e');
+      debugPrint('Falha inesperada ao criar conta: ${e.runtimeType}');
 
       if (!mounted) return;
 
@@ -130,7 +125,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1020),
+      backgroundColor: const Color(0xFF171316),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -145,7 +140,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       blurRadius: 25,
                       offset: const Offset(0, 10),
                     ),
@@ -164,7 +159,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         child: const Icon(
                           Icons.music_note,
-                          color: Color(0xFF16D9C5),
+                          color: Color(0xFFE9B96E),
                           size: 42,
                         ),
                       ),
@@ -272,7 +267,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: ElevatedButton(
                         onPressed: carregando ? null : cadastrarUsuario,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF16D9C5),
+                          backgroundColor: const Color(0xFFE9B96E),
                           foregroundColor: AppColors.background,
                           elevation: 0,
                           shape: RoundedRectangleBorder(

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const background = Color(0xFF0A1020);
-  static const surface = Color(0xFF121B2E);
-  static const surfaceRaised = Color(0xFF19263C);
-  static const surfaceHighlight = Color(0xFF22324C);
-  static const primary = Color(0xFF62E6D1);
-  static const secondary = Color(0xFFA78BFA);
-  static const text = Color(0xFFF4F7FB);
-  static const muted = Color(0xFFA6B3C5);
-  static const border = Color(0xFF2A3953);
+  static const background = Color(0xFF171316);
+  static const surface = Color(0xFF211C20);
+  static const surfaceRaised = Color(0xFF2D2429);
+  static const surfaceHighlight = Color(0xFF392C33);
+  static const primary = Color(0xFFE9B96E);
+  static const secondary = Color(0xFFD6A0B2);
+  static const text = Color(0xFFFFF8F2);
+  static const muted = Color(0xFFC3B5AF);
+  static const border = Color(0xFF493D43);
 }
 
 abstract final class AppTheme {
@@ -114,6 +114,40 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       dividerTheme: const DividerThemeData(color: AppColors.border),
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: {
+          for (final platform in TargetPlatform.values)
+            platform: const _SoftPageTransitionsBuilder(),
+        },
+      ),
+    );
+  }
+}
+
+class _SoftPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _SoftPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    final position = Tween<Offset>(
+      begin: const Offset(0.035, 0),
+      end: Offset.zero,
+    ).animate(curved);
+
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(position: position, child: child),
     );
   }
 }

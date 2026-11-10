@@ -16,8 +16,14 @@ dependencies:
   firebase_core: ^4.9.0
   firebase_auth: ^6.5.1
   cloud_firestore: ^6.4.1
-  audioplayers: 6.6.0
   shared_preferences: ^2.5.3
+  flutter_soloud: ^3.5.4
+  flutter_piano_pro: ^0.6.0
+  image_picker: ^1.2.1
+  firebase_storage: ^13.6.1
+  flutter_local_notifications: 20.1.0
+  flutter_timezone: ^5.1.1
+  timezone: 0.10.1
 
 dev_dependencies:
   flutter_test:
@@ -31,4 +37,5 @@ flutter:
 
   assets:
     - assets/sounds/
+    - assets/sounds/guitar/
     - assets/icons/music/

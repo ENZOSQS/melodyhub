@@ -514,9 +514,9 @@ class _IconShopScreenState extends State<IconShopScreen>
   Widget _rarityBadge(String rarity) {
     final color = switch (rarity) {
       'Lendário' => AppColors.secondary,
-      'Épico' => const Color(0xFF8AA3FF),
-      'Raro' => const Color(0xFF69C6F0),
-      'Incomum' => const Color(0xFF70D6A5),
+      'Épico' => const Color(0xFFD6A0B2),
+      'Raro' => const Color(0xFFD6A0B2),
+      'Incomum' => const Color(0xFFD2A45E),
       _ => AppColors.muted,
     };
     return _statusBadge(rarity, color);

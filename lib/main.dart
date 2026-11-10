@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'firebase_options.dart';
 import 'screens/login_page.dart';
-import 'screens/home_page.dart';
+import 'screens/app_shell.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -54,7 +54,7 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return const HomePage();
+          return const AppShell();
         }
 
         return const LoginPage();

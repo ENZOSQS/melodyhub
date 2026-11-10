@@ -12,8 +12,8 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  static const Color verde = Color(0xFF16D9C5);
-  static const Color preto = Color(0xFF0A1020);
+  static const Color verde = Color(0xFFE9B96E);
+  static const Color preto = Color(0xFF171316);
   final ProgressService _service = ProgressService();
   int? _periodo;
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _documentos = [];
@@ -217,7 +217,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final pergunta = dados['pergunta'] as String?;
     final resposta = dados['resposta'] as String?;
     final correta = dados['respostaCorreta'] as String?;
-    final duracao = _numero(dados['duracaoSegundos']);
+    final duracaoMs = dados['duracaoMilissegundos'] is num
+        ? _numero(dados['duracaoMilissegundos'])
+        : _numero(dados['duracaoSegundos']) * 1000;
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -272,7 +274,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 const SizedBox(height: 5),
                 Text(
-                  '${_formatarData(data)}  •  ${_formatarDuracao(duracao)}',
+                  '${_formatarData(data)}  •  ${_formatarDuracao(duracaoMs)}',
                   style: const TextStyle(color: AppColors.muted, fontSize: 11),
                 ),
               ],
@@ -301,7 +303,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '$dia/$mes/${data.year} às $hora:$minuto';
   }
 
-  String _formatarDuracao(int segundos) {
+  String _formatarDuracao(int milissegundos) {
+    if (milissegundos <= 0) return 'tempo não registrado';
+    if (milissegundos < 1000) {
+      return '${(milissegundos / 1000).toStringAsFixed(1)} s';
+    }
+    final segundos = (milissegundos / 1000).round();
     if (segundos < 60) return '$segundos s';
     return '${segundos ~/ 60} min ${segundos % 60} s';
   }
