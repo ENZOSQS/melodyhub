@@ -187,10 +187,10 @@ então o filtro ficaria vazio.
 atalho do simulador; o simulador de violão continua funcionando como antes.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `lib/widgets/guitar_fretboard.dart`, `lib/screens/guitar_fretboard_screen.dart`, `lib/screens/guitar_note_exercise_screen.dart`, `lib/screens/exercise_catalog_screen.dart`, `lib/screens/history_screen.dart`, `lib/screens/performance_screen.dart`.
+- Decisões: o braço expõe callback com corda, casa e MIDI e mantém a geometria visual e captura de arraste; o exercício usa alvo entre casas 0–5, mas aceita somente posições cujo MIDI seja exatamente igual. O filtro mantém os valores definidos em `AppPreferences`.
+- Pendências: teste de interação com áudio real e navegação em dispositivo não foi executado; emulação automatizada não verifica reprodução de samples.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou.
 
 ---
 

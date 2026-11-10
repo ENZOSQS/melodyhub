@@ -247,6 +247,9 @@ class PerformanceScreen extends StatelessWidget {
                         .map(
                           (e) => Chip(
                             backgroundColor: const Color(0xFF2D2429),
+                            avatar: e.key == 'Violão'
+                                ? const Icon(Icons.music_note, size: 16)
+                                : null,
                             label: Text(
                               '${e.key}: ${e.value}',
                               style: const TextStyle(color: Colors.white),

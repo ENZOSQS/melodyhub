@@ -231,7 +231,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            acertou ? Icons.check_circle : Icons.cancel,
+            dados['tipo'] == 'Violão'
+                ? Icons.music_note
+                : acertou
+                ? Icons.check_circle
+                : Icons.cancel,
             color: acertou ? Colors.green : Colors.red,
             size: 25,
           ),

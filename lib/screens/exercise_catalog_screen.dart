@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../services/app_preferences.dart';
+import 'guitar_fretboard_screen.dart';
+import 'guitar_note_exercise_screen.dart';
+import 'keyboard_screen.dart';
 import 'history_screen.dart';
 import 'learning_path_screen.dart';
 import 'music_concepts_screen.dart';
@@ -14,11 +18,13 @@ class _Activity {
     this.level,
     this.icon,
     this.builder,
-    this.kind,
-  );
+    this.kind, {
+    this.instrumentos = const [],
+  });
   final String title, description, level, kind;
   final IconData icon;
   final Widget Function() builder;
+  final List<String> instrumentos;
 }
 
 class ExerciseCatalogScreen extends StatefulWidget {
@@ -31,6 +37,23 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
   final _search = TextEditingController();
   String _kind = 'Todos';
   String _level = 'Todos';
+  String _instrument = 'Todos';
+
+  @override
+  void initState() {
+    super.initState();
+    AppPreferences.catalogInstrument().then((value) {
+      if (mounted && ['Todos', 'Teclado', 'Violão'].contains(value)) {
+        setState(() => _instrument = value);
+      }
+    });
+  }
+
+  Future<void> _setInstrument(String value) async {
+    setState(() => _instrument = value);
+    await AppPreferences.setCatalogInstrument(value);
+  }
+
   late final List<_Activity> _activities = [
     _Activity(
       'Prática: reconhecer notas',
@@ -39,6 +62,7 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
       Icons.hearing,
       () => const LearningPathScreen(track: LearningTrack.pratica),
       'Prática',
+      instrumentos: const ['Teclado'],
     ),
     _Activity(
       'Intervalos auditivos',
@@ -47,6 +71,7 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
       Icons.graphic_eq,
       () => const LearningPathScreen(track: LearningTrack.intervalos),
       'Audição',
+      instrumentos: const ['Teclado'],
     ),
     _Activity(
       'Teoria musical',
@@ -79,6 +104,16 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
       Icons.piano,
       () => const MusicConceptsScreen(exercise: ConceptExercise.chord),
       'Harmonia',
+      instrumentos: const ['Teclado'],
+    ),
+    _Activity(
+      'Violão: identificar notas',
+      'Ouça uma nota e encontre a mesma altura em qualquer corda ou casa.',
+      'Iniciante',
+      Icons.music_note,
+      () => const GuitarNoteExerciseScreen(),
+      'Prática',
+      instrumentos: const ['Violão'],
     ),
     _Activity(
       'Histórico de estudo',
@@ -113,6 +148,7 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
                   .toLowerCase()
                   .contains(query)) &&
           (_kind == 'Todos' || item.kind == _kind) &&
+          (_instrument == 'Todos' || item.instrumentos.contains(_instrument)) &&
           (_level == 'Todos' || item.level == 'Todos' || item.level == _level);
     }).toList();
     return Scaffold(
@@ -155,6 +191,36 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
             'Intermediário',
             'Avançado',
           ], (value) => setState(() => _level = value)),
+          _filter('Instrumento', _instrument, [
+            'Todos',
+            'Teclado',
+            'Violão',
+          ], _setInstrument),
+          if (_instrument != 'Todos') ...[
+            const SizedBox(height: 8),
+            Card(
+              color: AppColors.surface,
+              child: ListTile(
+                leading: Icon(
+                  _instrument == 'Violão' ? Icons.music_note : Icons.piano,
+                  color: AppColors.primary,
+                ),
+                title: Text(
+                  'Abrir simulador de $_instrument',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                trailing: const Icon(Icons.open_in_new, color: Colors.white70),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => _instrument == 'Violão'
+                        ? const GuitarFretboardScreen()
+                        : const KeyboardScreen(),
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           if (visible.isEmpty)
             const Padding(
