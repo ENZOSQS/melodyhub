@@ -64,6 +64,7 @@ de 60 linhas; nenhuma tela foi alterada além de imports.
 - Decisões: `XpCalculator.calculateXp` foi mantido e reutilizado; o timestamp do Firestore é convertido no serviço para `DateTime`, mantendo o domínio sem dependências externas. Perfil e histórico continuam sendo gravados na mesma transação.
 - Pendências: nenhuma para esta tarefa.
 - analyze/test: `flutter analyze` sem problemas; `flutter test` passou (inclui os testes novos de regras de progresso e de montagem da tela de login).
+- Complemento: cobertos o fallback de sequência com `ultimoExercicio` legado (`DateTime`) e a conclusão de etapa teórica abaixo do nível atual, sem alterar a rodada corrente; datas passaram a usar `StudyStreak.dateKey`.
 
 ---
 

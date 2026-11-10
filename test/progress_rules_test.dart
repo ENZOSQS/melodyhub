@@ -159,6 +159,39 @@ void main() {
     expect(dados['sequenciaDiasAtual'], 3);
   });
 
+  test('recupera sequência legada a partir de ultimoExercicio DateTime', () {
+    final resultado = aplicarExercicio(
+      dados: {
+        'sequenciaDiasAtual': 1,
+        'ultimoExercicio': _hoje.subtract(const Duration(days: 1)),
+      },
+      acertou: true,
+      tipo: 'Prático',
+      agora: _hoje,
+    );
+    expect(resultado.camposPerfil['sequenciaDiasAtual'], 2);
+    expect(resultado.camposPerfil['ultimoDiaEstudo'], '2026-10-20');
+  });
+
+  test(
+    'teoria abaixo do nível atual conclui a etapa sem mudar a rodada atual',
+    () {
+      var dados = <String, dynamic>{'nivelTeoria': 3};
+      for (var i = 0; i < 10; i++) {
+        dados = aplicarExercicio(
+          dados: dados,
+          acertou: true,
+          tipo: 'Teórico',
+          dificuldade: 1,
+          agora: _hoje,
+        ).camposPerfil;
+      }
+      expect(dados['nivelTeoria'], 3);
+      expect(dados['tentativasTeoriaNivel'], 0);
+      expect((dados['teoriaEtapas'] as Map)['1']['concluida'], isTrue);
+    },
+  );
+
   test('conquistas solicitadas são concedidas sem duplicação', () {
     var dados = <String, dynamic>{};
     for (var i = 0; i < 10; i++) {

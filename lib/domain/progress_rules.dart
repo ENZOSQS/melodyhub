@@ -1,4 +1,5 @@
 import '../utils/xp_calculator.dart';
+import '../utils/study_streak.dart';
 
 /// Resultado determinístico das regras aplicadas a uma resposta.
 ///
@@ -47,16 +48,16 @@ ResultadoExercicio aplicarExercicio({
     _numero(dados['melhorSequencia']),
   );
 
-  final hoje = _chaveData(agora);
+  final hoje = StudyStreak.dateKey(agora);
   var sequenciaDias = _numero(dados['sequenciaDiasAtual']);
   var ultimoDia = dados['ultimoDiaEstudo'] as String?;
   final ultimoExercicio = dados['ultimoExercicio'];
   if (ultimoDia == null && ultimoExercicio is DateTime) {
-    ultimoDia = _chaveData(ultimoExercicio.toLocal());
+    ultimoDia = StudyStreak.dateKey(ultimoExercicio.toLocal());
     if (sequenciaDias == 0) sequenciaDias = 1;
   }
   if (ultimoDia != hoje) {
-    final ontem = _chaveData(agora.subtract(const Duration(days: 1)));
+    final ontem = StudyStreak.dateKey(agora.subtract(const Duration(days: 1)));
     sequenciaDias = ultimoDia == ontem ? sequenciaDias + 1 : 1;
   }
   final melhorSequenciaDias = _max(
@@ -384,8 +385,3 @@ int _nivel(dynamic valor, int maximo) =>
     _numero(valor).clamp(1, maximo).toInt();
 
 int _max(int primeiro, int segundo) => primeiro > segundo ? primeiro : segundo;
-
-String _chaveData(DateTime data) =>
-    '${data.year.toString().padLeft(4, '0')}-'
-    '${data.month.toString().padLeft(2, '0')}-'
-    '${data.day.toString().padLeft(2, '0')}';
