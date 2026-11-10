@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
+import '../services/app_preferences.dart';
+import '../utils/note_names.dart';
 import '../widgets/piano_answer_keyboard.dart';
 
 class IntervalExercisesScreen extends StatefulWidget {
@@ -25,19 +27,19 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   static const Duration _pausaNormal = Duration(milliseconds: 55);
   static const Duration _pausaLenta = Duration(milliseconds: 150);
   static const _notes = [
-    ('Dó', 'C3.wav'),
-    ('Dó sustenido', 'C#3.wav'),
-    ('Ré', 'D3.wav'),
-    ('Ré sustenido', 'D#3.wav'),
-    ('Mi', 'E3.wav'),
-    ('Fá', 'F3.wav'),
-    ('Fá sustenido', 'F#3.wav'),
-    ('Sol', 'G3.wav'),
-    ('Sol sustenido', 'G#3.wav'),
-    ('Lá', 'A3.wav'),
-    ('Lá sustenido', 'A#3.wav'),
-    ('Si', 'B3.wav'),
-    ('Dó', 'C4.wav'),
+    (0, 'C3.wav'),
+    (1, 'C#3.wav'),
+    (2, 'D3.wav'),
+    (3, 'D#3.wav'),
+    (4, 'E3.wav'),
+    (5, 'F3.wav'),
+    (6, 'F#3.wav'),
+    (7, 'G3.wav'),
+    (8, 'G#3.wav'),
+    (9, 'A3.wav'),
+    (10, 'A#3.wav'),
+    (11, 'B3.wav'),
+    (12, 'C4.wav'),
   ];
   static const _intervalNames = [
     '',
@@ -83,8 +85,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   int _nextAttempts = 0;
   late int _degree;
   late bool _ascending;
-  late (String, String) _firstNote;
-  late (String, String) _secondNote;
+  late (int, String) _firstNote;
+  late (int, String) _secondNote;
+  String _tipoNota = 'solfejo';
 
   Duration get _noteDuration => _slowAudio ? _duracaoLenta : _duracaoNormal;
   Duration get _noteGap => _slowAudio ? _pausaLenta : _pausaNormal;
@@ -129,6 +132,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   Future<void> _initialize() async {
     try {
       final data = await _progress.buscarProgresso();
+      final tipoNota = await AppPreferences.noteType();
       if (!mounted) return;
       final currentLevel = _number(data['nivelIntervalos']).clamp(1, 5).toInt();
       final level = (widget.nivelSelecionado ?? currentLevel)
@@ -143,6 +147,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       await _audio.preload(_notes.map((note) => note.$2));
       if (!mounted) return;
       setState(() {
+        _tipoNota = tipoNota;
         _currentLevel = currentLevel;
         _nextLevel = currentLevel;
         _level = level;
@@ -200,10 +205,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     }
   }
 
-  int _midiOf((String, String) note) =>
-      48 + _notes.indexWhere((item) => item.$2 == note.$2);
+  int _midiOf((int, String) note) => 48 + note.$1;
 
-  String _noteName(int midi) => _notes[midi - 48].$1;
+  String _noteName(int midi) => nomeNota(midi, _tipoNota);
 
   Future<void> _playKeyboardAnswer(int midi) async {
     if (_playing || _saving || _selected != null) return;
@@ -246,7 +250,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
         tipo: 'Intervalo',
         pergunta: 'Ouça o intervalo e reproduza no teclado a nota de chegada.',
         resposta: 'Nota ${_noteName(playedMidi)}',
-        respostaCorreta: '${_intervalNames[_degree]} · nota ${_secondNote.$1}',
+        respostaCorreta:
+            '${_intervalNames[_degree]} · nota ${_noteName(_midiOf(_secondNote))}',
         dificuldade: _level,
         questaoId:
             'intervalo_${_level}_${_degree}_${_ascending ? 'asc' : 'desc'}',
@@ -305,7 +310,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   }
 
   String get _intervalExplanation =>
-      '${_firstNote.$1} → ${_secondNote.$1} percorre $_degree semiton${_degree == 1 ? '' : 's'} e forma ${_intervalNames[_degree]}. O sentido é ${_ascending ? 'ascendente' : 'descendente'}, mas o tamanho do intervalo permanece o mesmo. No teclado, conte cada tecla vizinha como um semitom.';
+      '${_noteName(_midiOf(_firstNote))} → ${_noteName(_midiOf(_secondNote))} percorre $_degree semiton${_degree == 1 ? '' : 's'} e forma ${_intervalNames[_degree]}. O sentido é ${_ascending ? 'ascendente' : 'descendente'}, mas o tamanho do intervalo permanece o mesmo. No teclado, conte cada tecla vizinha como um semitom.';
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +393,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                             const SizedBox(height: 6),
                             Text(
                               _level == 1
-                                  ? 'Dó → Ré = 2 semitons · Dó → Mi = 4 semitons'
+                                  ? '${nomeNota(48, _tipoNota)} → ${nomeNota(50, _tipoNota)} = 2 semitons · ${nomeNota(48, _tipoNota)} → ${nomeNota(52, _tipoNota)} = 4 semitons'
                                   : 'Cada tecla vizinha no piano representa um semitom.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -477,7 +482,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Comece em ${_firstNote.$1}. Toque no piano a nota que ouviu por último.',
+                          'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -488,6 +493,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                       PianoAnswerKeyboard(
                         enabled: !_playing && !_saving,
                         selectedMidi: const <int>{},
+                        tipoNota: _tipoNota,
                         onNotePressed: _playKeyboardAnswer,
                       ),
                       const SizedBox(height: 12),

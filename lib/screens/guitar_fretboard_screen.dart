@@ -4,8 +4,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../services/music_audio_service.dart';
+import '../services/app_preferences.dart';
 import '../theme/app_theme.dart';
 import '../utils/guitar_sample_map.dart';
+import '../utils/note_names.dart';
 
 class GuitarFretboardScreen extends StatefulWidget {
   const GuitarFretboardScreen({super.key});
@@ -15,20 +17,6 @@ class GuitarFretboardScreen extends StatefulWidget {
 
 class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
   static const _tuning = GuitarSampleMap.openMidiNotes;
-  static const _names = [
-    'Dó',
-    'Dó♯',
-    'Ré',
-    'Ré♯',
-    'Mi',
-    'Fá',
-    'Fá♯',
-    'Sol',
-    'Sol♯',
-    'Lá',
-    'Lá♯',
-    'Si',
-  ];
   static const _strings = ['Mi aguda', 'Si', 'Sol', 'Ré', 'Lá', 'Mi grave'];
 
   final _audio = MusicAudioService.instance;
@@ -37,6 +25,7 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
   (int, int)? _lastInputPosition;
   bool _loading = true;
   bool _showNoteNames = false;
+  String _tipoNota = 'solfejo';
 
   @override
   void initState() {
@@ -45,6 +34,11 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
   }
 
   Future<void> _load() async {
+    try {
+      _tipoNota = await AppPreferences.noteType();
+    } catch (_) {
+      _tipoNota = 'solfejo';
+    }
     try {
       await _audio.preload([...GuitarSampleMap.fretboardAssets]);
     } catch (error) {
@@ -144,7 +138,7 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
                             duration: const Duration(milliseconds: 160),
                             child: Text(
                               key: ValueKey(_lastMidi),
-                              '${_names[_lastMidi! % 12]} · ${_lastMidi! ~/ 12 - 1}ª oitava  ·  ${_strings[_lastPosition!.$1]} / casa ${_lastPosition!.$2}',
+                              '${nomeNota(_lastMidi!, _tipoNota)} · ${_lastMidi! ~/ 12 - 1}ª oitava  ·  ${_strings[_lastPosition!.$1]} / casa ${_lastPosition!.$2}',
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -205,7 +199,10 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
                                     showNoteNames: _showNoteNames,
                                     active: _lastPosition,
                                     tuning: _tuning,
-                                    noteNames: _names,
+                                    noteNames: List.generate(
+                                      12,
+                                      (index) => nomeNota(index, _tipoNota),
+                                    ),
                                   ),
                                   size: Size(boardWidth, boardHeight),
                                 ),

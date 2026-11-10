@@ -7,6 +7,7 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import '../services/app_preferences.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
+import '../utils/note_names.dart';
 import '../widgets/piano_answer_keyboard.dart';
 
 enum ConceptExercise { scale, chord }
@@ -33,20 +34,6 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
     'A',
     'A#',
     'B',
-  ];
-  static const _solfege = [
-    'Dó',
-    'Dó♯',
-    'Ré',
-    'Ré♯',
-    'Mi',
-    'Fá',
-    'Fá♯',
-    'Sol',
-    'Sol♯',
-    'Lá',
-    'Lá♯',
-    'Si',
   ];
   static const _scaleData = <String, List<int>>{
     'Maior': [0, 2, 4, 5, 7, 9, 11, 12],
@@ -104,7 +91,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
   String get _title => widget.exercise == ConceptExercise.scale
       ? 'Reconhecer escalas'
       : 'Reconhecer acordes';
-  String get _noteName => (_noteType == 'cifragem' ? _notes : _solfege)[_root];
+  String get _noteName => nomeNota(_root, _noteType ?? 'solfejo');
   String _file(int semitone) {
     final absolute = _root + semitone;
     final index = absolute % 12;
@@ -255,7 +242,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
         .toSet();
     final actual = _chordMidiSelection.map((note) => note % 12).toSet();
     final pickedNames = _chordMidiSelection
-        .map((note) => _solfege[note % 12])
+        .map((note) => nomeNota(note, _noteType ?? 'solfejo'))
         .join(', ');
     await _submit(
       actual.length == 3 && actual.containsAll(expected),
@@ -336,6 +323,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
                   noteCount: 12,
                   enabled: !_playing && !_saving && _correct == null,
                   selectedMidi: _chordMidiSelection,
+                  tipoNota: _noteType ?? 'solfejo',
                   onNotePressed: _pressChordKey,
                 ),
                 Align(

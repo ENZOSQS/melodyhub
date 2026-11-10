@@ -10,6 +10,7 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 
 import '../services/music_audio_service.dart';
 import '../services/app_preferences.dart';
+import '../utils/note_names.dart';
 
 class KeyboardScreen extends StatefulWidget {
   const KeyboardScreen({super.key});
@@ -360,7 +361,9 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
     final viewport = MediaQuery.sizeOf(context);
     final landscape = viewport.width > viewport.height;
     final octaveCount = viewport.width >= 1000 ? 2 : 1;
-    final range = 'Dó$_firstOctave–Si${_firstOctave + octaveCount - 1}';
+    final range =
+        '${nomeNota(0, _noteType == NoteType.english ? 'cifragem' : 'solfejo')}$_firstOctave–'
+        '${nomeNota(11, _noteType == NoteType.english ? 'cifragem' : 'solfejo')}${_firstOctave + octaveCount - 1}';
 
     return Focus(
       autofocus: true,
@@ -408,7 +411,11 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
               final whiteKeyCount = constraints.maxWidth >= 1000 ? 14 : 7;
               final compact = constraints.maxHeight < 410;
               final lastOctave = _firstOctave + (whiteKeyCount ~/ 7) - 1;
-              final rangeLabel = 'Dó$_firstOctave–Si$lastOctave';
+              final tipoNome = _noteType == NoteType.english
+                  ? 'cifragem'
+                  : 'solfejo';
+              final rangeLabel =
+                  '${nomeNota(0, tipoNome)}$_firstOctave–${nomeNota(11, tipoNome)}$lastOctave';
 
               return Column(
                 children: [

@@ -146,10 +146,10 @@ textos dos exercícios; a preferência volta após reinstalar o app ou entrar em
 Adicione um teste unitário simples para `note_names.dart`.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `lib/utils/note_names.dart`, telas de violão, prática, intervalos, teclado, conceitos musicais e perfil, `lib/widgets/piano_answer_keyboard.dart`, `lib/screens/app_shell.dart`, `test/note_names_test.dart`.
+- Decisões: a cifra e o solfejo são renderizados a partir da classe MIDI; o nome por extenso usa solfejo português. A nomenclatura local é cache e a preferência válida do Firestore sincroniza ao abrir o `AppShell` autenticado.
+- Pendências: não foi possível validar sincronização entre contas/dispositivos sem sessão Firebase de teste; leitura e gravação têm fallback local.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou, incluindo o teste de nomes de notas.
 
 ---
 

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
+import '../services/app_preferences.dart';
+import '../utils/note_names.dart';
 
 class ExercisesScreen extends StatefulWidget {
   const ExercisesScreen({super.key, this.nivelSelecionado});
@@ -22,14 +24,14 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   static const Duration _duracaoLenta = Duration(milliseconds: 620);
   static const Duration _pausaNormal = Duration(milliseconds: 55);
   static const Duration _pausaLenta = Duration(milliseconds: 150);
-  static const List<Map<String, String>> _notas = [
-    {'nome': 'Dó', 'arquivo': 'C3.wav'},
-    {'nome': 'Ré', 'arquivo': 'D3.wav'},
-    {'nome': 'Mi', 'arquivo': 'E3.wav'},
-    {'nome': 'Fá', 'arquivo': 'F3.wav'},
-    {'nome': 'Sol', 'arquivo': 'G3.wav'},
-    {'nome': 'Lá', 'arquivo': 'A3.wav'},
-    {'nome': 'Si', 'arquivo': 'B3.wav'},
+  List<Map<String, String>> get _notas => [
+    {'nome': nomeNota(0, _tipoNota), 'arquivo': 'C3.wav'},
+    {'nome': nomeNota(2, _tipoNota), 'arquivo': 'D3.wav'},
+    {'nome': nomeNota(4, _tipoNota), 'arquivo': 'E3.wav'},
+    {'nome': nomeNota(5, _tipoNota), 'arquivo': 'F3.wav'},
+    {'nome': nomeNota(7, _tipoNota), 'arquivo': 'G3.wav'},
+    {'nome': nomeNota(9, _tipoNota), 'arquivo': 'A3.wav'},
+    {'nome': nomeNota(11, _tipoNota), 'arquivo': 'B3.wav'},
   ];
 
   final MusicAudioService _audio = MusicAudioService.instance;
@@ -56,6 +58,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   bool _audioLento = false;
   bool? _acertou;
   String? _erroInicializacao;
+  String _tipoNota = 'solfejo';
   List<Map<String, String>> _alvo = [];
   List<String> _respostas = [];
 
@@ -100,6 +103,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   Future<void> _inicializar() async {
     try {
       final progresso = await _progressService.buscarProgresso();
+      final tipoNota = await AppPreferences.noteType();
       if (!mounted) return;
       final nivelAtual = _numero(progresso['nivelPratico']).clamp(1, 5).toInt();
       final etapas = Map<String, dynamic>.from(
@@ -112,6 +116,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       await _audio.preload(_notas.map((nota) => nota['arquivo']!));
       if (!mounted) return;
       setState(() {
+        _tipoNota = tipoNota;
         _nivelAtual = nivelAtual;
         _proximoNivel = nivelAtual;
         _nivel = (widget.nivelSelecionado ?? nivelAtual)

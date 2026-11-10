@@ -1,5 +1,10 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/app_preferences.dart';
 import '../theme/app_theme.dart';
 import 'exercise_catalog_screen.dart';
 import 'home_page.dart';
@@ -17,6 +22,31 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selected = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_sincronizarNomenclatura());
+  }
+
+  Future<void> _sincronizarNomenclatura() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final documento = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
+      final preferencias = documento.data()?['preferencias'];
+      if (preferencias is! Map) return;
+      final nomenclatura = preferencias['nomenclatura'];
+      if (nomenclatura == 'cifragem' || nomenclatura == 'solfejo') {
+        await AppPreferences.setNoteType(nomenclatura as String);
+      }
+    } catch (_) {
+      // A preferência local permanece disponível se a sincronização falhar.
+    }
+  }
 
   static const _destinations = <NavigationDestination>[
     NavigationDestination(

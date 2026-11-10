@@ -69,6 +69,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  Future<void> _salvarNomenclatura(String valor) async {
+    setState(() => _tipoNota = valor);
+    await AppPreferences.setNoteType(valor);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
+        'preferencias': {'nomenclatura': valor},
+      }, SetOptions(merge: true));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'A preferência foi salva neste aparelho, mas não foi sincronizada com a conta.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _escolherFoto() async {
     final usuario = FirebaseAuth.instance.currentUser;
     if (usuario == null || _enviandoFoto) return;
@@ -477,11 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ButtonSegment(value: 'cifragem', label: Text('C–D–E')),
           ],
           selected: {_tipoNota},
-          onSelectionChanged: (values) {
-            final value = values.first;
-            setState(() => _tipoNota = value);
-            AppPreferences.setNoteType(value);
-          },
+          onSelectionChanged: (values) => _salvarNomenclatura(values.first),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,

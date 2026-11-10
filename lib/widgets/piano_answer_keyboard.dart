@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../utils/note_names.dart';
 
 /// One-octave piano used as an actual answer surface in listening exercises.
 class PianoAnswerKeyboard extends StatelessWidget {
@@ -12,6 +13,7 @@ class PianoAnswerKeyboard extends StatelessWidget {
     this.selectedMidi = const <int>{},
     this.enabled = true,
     this.showLabels = true,
+    this.tipoNota = 'solfejo',
   });
 
   final ValueChanged<int> onNotePressed;
@@ -20,21 +22,8 @@ class PianoAnswerKeyboard extends StatelessWidget {
   final Set<int> selectedMidi;
   final bool enabled;
   final bool showLabels;
+  final String tipoNota;
 
-  static const _names = <int, String>{
-    0: 'Dó',
-    1: 'Dó♯',
-    2: 'Ré',
-    3: 'Ré♯',
-    4: 'Mi',
-    5: 'Fá',
-    6: 'Fá♯',
-    7: 'Sol',
-    8: 'Sol♯',
-    9: 'Lá',
-    10: 'Lá♯',
-    11: 'Si',
-  };
   static const _whiteClasses = <int>{0, 2, 4, 5, 7, 9, 11};
   static const _blackAfterWhite = <int, int>{0: 1, 1: 3, 3: 6, 4: 8, 5: 10};
 
@@ -90,7 +79,7 @@ class PianoAnswerKeyboard extends StatelessWidget {
                             ? FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  _names[midi % 12]!,
+                                  nomeNota(midi, tipoNota),
                                   style: const TextStyle(
                                     color: Color(0xFF322A28),
                                     fontSize: 10,
@@ -139,7 +128,7 @@ class PianoAnswerKeyboard extends StatelessWidget {
                           ? FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                _names[midi % 12]!,
+                                nomeNota(midi, tipoNota),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 8,
