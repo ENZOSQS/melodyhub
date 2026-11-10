@@ -1,12 +1,8 @@
 // lib/screens/profile_screen.dart
 
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../data/profile_icon_rewards.dart';
 import '../services/progress_service.dart';
@@ -31,7 +27,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _editando = false;
   bool _salvando = false;
-  bool _enviandoFoto = false;
   bool _rotulosTeclado = true;
   bool _lembreteAtivo = false;
   int _bpm = 80;
@@ -91,55 +86,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       }
-    }
-  }
-
-  Future<void> _escolherFoto() async {
-    final usuario = FirebaseAuth.instance.currentUser;
-    if (usuario == null || _enviandoFoto) return;
-    try {
-      final image = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 900,
-        imageQuality: 82,
-      );
-      if (image == null) return;
-      setState(() => _enviandoFoto = true);
-      final Uint8List bytes = await image.readAsBytes();
-      final isPng =
-          image.mimeType == 'image/png' ||
-          image.name.toLowerCase().endsWith('.png');
-      final extension = isPng ? 'png' : 'jpg';
-      final ref = FirebaseStorage.instance.ref(
-        'profilePhotos/${usuario.uid}/avatar.$extension',
-      );
-      await ref.putData(
-        bytes,
-        SettableMetadata(contentType: isPng ? 'image/png' : 'image/jpeg'),
-      );
-      final url = await ref.getDownloadURL();
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(usuario.uid)
-          .set({'fotoUrl': url}, SetOptions(merge: true));
-      await usuario.updatePhotoURL(url);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto de perfil atualizada.')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível enviar a foto. Verifique o Firebase Storage e tente novamente.',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _enviandoFoto = false);
     }
   }
 
@@ -288,7 +234,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  Widget _iconePerfil(String? id, {double size = 43}) {
+  Widget _iconePerfil(
+    String? id, {
+    double size = 43,
+    String nomeFallback = 'Aluno',
+  }) {
     final encontrados = allProfileIconRewards.where((item) => item.id == id);
     final recompensa = encontrados.isEmpty ? null : encontrados.first;
     if (recompensa?.assetPath != null) {
@@ -301,11 +251,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icon(recompensa.fallbackIcon, color: verde, size: size),
       );
     }
-    return Icon(
-      recompensa?.fallbackIcon ?? Icons.person,
-      color: verde,
-      size: size,
-    );
+    if (recompensa == null) {
+      return Text(
+        nomeFallback.trim().isEmpty
+            ? 'A'
+            : nomeFallback.trim().characters.first.toUpperCase(),
+        style: TextStyle(
+          color: verde,
+          fontSize: size * .75,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+    return Icon(recompensa.fallbackIcon, color: verde, size: size);
   }
 
   @override
@@ -398,39 +356,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: Column(
                       children: [
-                        Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            CircleAvatar(
-                              radius: 40,
-                              backgroundColor: AppColors.surfaceRaised,
-                              child: fotoUrl == null
-                                  ? _iconePerfil(iconePerfilId)
-                                  : ClipOval(
-                                      child: Image.network(
-                                        fotoUrl,
-                                        width: 80,
-                                        height: 80,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            _iconePerfil(iconePerfilId),
-                                      ),
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: AppColors.surfaceRaised,
+                          child: fotoUrl == null
+                              ? _iconePerfil(
+                                  iconePerfilId,
+                                  nomeFallback: nome.toString(),
+                                )
+                              : ClipOval(
+                                  child: Image.network(
+                                    fotoUrl,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => _iconePerfil(
+                                      iconePerfilId,
+                                      nomeFallback: nome.toString(),
                                     ),
-                            ),
-                            IconButton.filled(
-                              onPressed: _enviandoFoto ? null : _escolherFoto,
-                              icon: _enviandoFoto
-                                  ? const SizedBox(
-                                      width: 17,
-                                      height: 17,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.photo_camera, size: 17),
-                              tooltip: 'Alterar foto de perfil',
-                            ),
-                          ],
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 12),
                         Text(

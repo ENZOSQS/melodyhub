@@ -44,6 +44,8 @@ As credenciais e a configuração do Firebase não devem ser compartilhadas publ
 
 ## Regras de segurança
 
-As regras versionadas em `firestore.rules` e `storage.rules` limitam o acesso ao perfil e ao histórico ao próprio usuário e protegem os arquivos de foto de perfil. Para publicá-las no projeto Firebase configurado, execute `firebase deploy --only firestore:rules,storage`.
+As regras versionadas em `firestore.rules` limitam o acesso ao perfil e ao histórico ao próprio usuário. Para publicá-las no projeto Firebase configurado, execute `firebase deploy --only firestore:rules`.
+
+Foto de perfil fora do escopo: requer Firebase Storage (plano Blaze).
 
 XP e pontos são calculados pelo aplicativo cliente. As regras impedem o acesso aos dados de outras contas e valores negativos nos campos validados, mas não impedem fraude nos próprios dados de uma conta.

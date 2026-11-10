@@ -287,10 +287,10 @@ exige o plano Blaze. O botão de foto do perfil falha sempre. A personalização
 **Aceite:** o perfil abre sem o botão de foto; o app compila sem os dois pacotes; analyze e test passam.
 
 **Registro:**
-- Arquivos:
-- Decisões:
-- Pendências:
-- analyze/test:
+- Arquivos: `lib/screens/profile_screen.dart`, `pubspec.yaml`, `pubspec.lock`, `firebase.json`, `README.md`, arquivos de registro de plugins Flutter em `linux/`, `macos/` e `windows/`; removido `storage.rules`.
+- Decisões: o avatar continua exibindo `fotoUrl` antiga quando presente; sem foto, mostra o ícone escolhido ou a inicial do nome. A busca por permissões específicas de câmera/galeria em Android e iOS não encontrou declarações a remover. A configuração gerada do Firebase foi mantida.
+- Pendências: envio de foto permanece fora do escopo até o Firebase Storage estar disponível; nenhuma migração foi feita nos dados existentes.
+- analyze/test: `flutter pub get` removeu `firebase_storage`, `image_picker` e plugins transitivos; `flutter analyze` sem problemas; `flutter test` passou (31 testes).
 
 ---
 
