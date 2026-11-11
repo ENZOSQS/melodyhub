@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../services/progress_service.dart';
 import '../domain/report_rules.dart';
+import '../theme/app_theme.dart';
+import '../widgets/mh_ui.dart';
 import 'exercises_screen.dart';
 import 'guitar_fretboard_screen.dart';
 import 'guitar_note_exercise_screen.dart';
 import 'interval_exercises_screen.dart';
 import 'music_concepts_screen.dart';
+import 'profile_screen.dart';
 import 'rhythm_exercise_screen.dart';
 import 'theory_exercises_screen.dart';
 
@@ -28,16 +31,8 @@ class PerformanceScreen extends StatelessWidget {
     ).subtract(const Duration(days: 6));
     return Scaffold(
       backgroundColor: preto,
-      appBar: AppBar(
-        backgroundColor: preto,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Desempenho',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      body: SafeArea(
+        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: service.ouvirHistorico(dias: 7, limite: null),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -116,264 +111,224 @@ class PerformanceScreen extends StatelessWidget {
             if (exercicio['acertou'] == true) resultado[1]++;
           }
 
+          final sugestoes = _sugestoes(resultadosCategoria);
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.only(bottom: 28),
             children: [
-              Text(
-                'Últimos 7 dias · ${_data(inicio)} a ${_data(hoje)}',
-                style: const TextStyle(color: Colors.white70),
+              MelodyHeader(
+                onNotificacoes: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _metric('Exercícios', '$total', Icons.quiz_outlined),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _metric(
-                      'Precisão',
-                      '$precisao%',
-                      Icons.track_changes,
-                    ),
-                  ),
-                ],
+              MhPageTitle(
+                'Relatório da semana',
+                subtitulo: 'Últimos 7 dias · ${_data(inicio)} a ${_data(hoje)}',
               ),
-              const SizedBox(height: 9),
-              Row(
-                children: [
-                  Expanded(
-                    child: _metric(
-                      'XP na semana',
-                      '$xpSemana',
-                      Icons.star_outline,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: MhStatCard(
+                            icone: Icons.track_changes_rounded,
+                            rotulo: 'Precisão',
+                            valor: '$precisao%',
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MhStatCard(
+                            icone: Icons.star_outline_rounded,
+                            corIcone: AppColors.primary,
+                            rotulo: 'XP na semana',
+                            valor: '$xpSemana',
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MhStatCard(
+                            icone: Icons.schedule_rounded,
+                            rotulo: 'Tempo de estudo',
+                            valor: _duracao((milissegundos / 1000).round()),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _metric(
-                      'Acertos',
-                      '$acertos',
-                      Icons.check_circle_outline,
+                    const SizedBox(height: 8),
+                    Text(
+                      '$total exercícios · $acertos acertos. O tempo soma só o período respondendo exercícios.',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _painel(
-                titulo: 'Precisão por dia',
-                child: SizedBox(
-                  height: 164,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(7, (i) {
-                      final percentual = porDia[i] == 0
-                          ? 0
-                          : (acertosPorDia[i] * 100 / porDia[i]).round();
-                      final altura = porDia[i] == 0
-                          ? 5.0
-                          : 80.0 * percentual / 100;
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 3),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                    const SizedBox(height: 14),
+                    MhCard(
+                      padding: const EdgeInsets.fromLTRB(12, 18, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6, bottom: 10),
+                            child: Text(
+                              'Precisão por dia (%)',
+                              style: TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          _GraficoPrecisao(
+                            dias: [for (final dia in dias) _diaSemana(dia)],
+                            percentuais: [
+                              for (var i = 0; i < 7; i++)
+                                porDia[i] == 0
+                                    ? null
+                                    : acertosPorDia[i] * 100 / porDia[i],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const MhSectionTitle('O que mais precisa de revisão'),
+                    if (itensCriticos.isEmpty)
+                      const MhCard(
+                        child: Text(
+                          'Ainda não há itens com dois ou mais erros nos últimos sete dias. Continue praticando para identificar o que merece revisão.',
+                          style: TextStyle(color: AppColors.muted, height: 1.4),
+                        ),
+                      ),
+                    for (final item in itensCriticos)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: MhCard(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+                          child: Row(
                             children: [
-                              Text(
-                                porDia[i] == 0 ? '—' : '$percentual%',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 11,
+                              MhIconTile(
+                                icone: _iconeTipo(item.tipo),
+                                cor: AppColors.secondary,
+                                tamanho: 54,
+                              ),
+                              const MhDividerVertical(altura: 50),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${item.item} –',
+                                      style: const TextStyle(
+                                        color: AppColors.text,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${item.erros} erros em ${item.tentativas} tentativas',
+                                      style: const TextStyle(
+                                        color: AppColors.muted,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 5),
-                              Container(
-                                height: altura,
-                                decoration: BoxDecoration(
-                                  color: porDia[i] == 0
-                                      ? Colors.white12
-                                      : verde,
-                                  borderRadius: BorderRadius.circular(7),
-                                ),
-                              ),
-                              const SizedBox(height: 7),
-                              Text(
-                                _diaSemana(dias[i]),
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 10,
-                                ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: () =>
+                                    _abrirExercicio(context, item.tipo),
+                                child: const Text('Praticar'),
                               ),
                             ],
                           ),
                         ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _painel(
-                titulo: 'Tempo de prática registrado',
-                child: Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, color: verde, size: 30),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _duracao((milissegundos / 1000).round()),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                      ),
+                    if (categorias.isNotEmpty) ...[
+                      const MhSectionTitle('Por tipo de exercício'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final e in categorias.entries)
+                            MhBadge(texto: '${e.key}: ${e.value}'),
+                        ],
+                      ),
+                    ],
+                    const MhSectionTitle('O que praticar em seguida'),
+                    if (sugestoes.isEmpty)
+                      const MhCard(
+                        child: Text(
+                          'Nenhuma habilidade precisa de reforço com os dados atuais. Abaixo de três respostas, ainda é cedo para apontar uma dificuldade.',
+                          style: TextStyle(color: AppColors.muted, height: 1.4),
                         ),
                       ),
-                    ),
-                    const Icon(
-                      Icons.info_outline,
-                      color: Colors.white54,
-                      size: 18,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  'Tempo somado enquanto você responde exercícios; pausas e simulador livre não entram nessa conta.',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-              if (categorias.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _painel(
-                  titulo: 'Por tipo de exercício',
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: categorias.entries
-                        .map(
-                          (e) => Chip(
-                            backgroundColor: const Color(0xFF2D2429),
-                            avatar: e.key == 'Violão'
-                                ? const Icon(Icons.music_note, size: 16)
-                                : null,
-                            label: Text(
-                              '${e.key}: ${e.value}',
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            side: BorderSide.none,
+                    for (final item in sugestoes)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: MhCard(
+                          padding: const EdgeInsets.all(14),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => item.$3()),
                           ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              _painel(
-                titulo: 'O que mais precisa de revisão',
-                child: itensCriticos.isEmpty
-                    ? const Text(
-                        'Ainda não há itens com dois ou mais erros nos últimos sete dias. Continue praticando para identificar o que merece revisão.',
-                        style: TextStyle(color: Colors.white70, height: 1.4),
-                      )
-                    : Column(
-                        children: itensCriticos.map((item) {
-                          final titulo = '${item.item} · ${item.tipo}';
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(
-                              Icons.priority_high_rounded,
-                              color: Colors.orangeAccent,
-                            ),
-                            title: Text(
-                              titulo,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
+                          child: Row(
+                            children: [
+                              const MhIconTile(
+                                icone: Icons.lightbulb_outline_rounded,
+                                tamanho: 46,
                               ),
-                            ),
-                            subtitle: Text(
-                              '${item.erros} erros em ${item.tentativas} tentativas',
-                              style: const TextStyle(color: Colors.white60),
-                            ),
-                            trailing: const Icon(
-                              Icons.arrow_forward,
-                              color: Colors.white60,
-                            ),
-                            onTap: () => _abrirExercicio(context, item.tipo),
-                          );
-                        }).toList(),
-                      ),
-              ),
-              const SizedBox(height: 12),
-              _painel(
-                titulo: 'O que praticar em seguida',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'As sugestões usam seus resultados dos últimos sete dias. Abaixo de três respostas, ainda é cedo para apontar uma dificuldade.',
-                      style: TextStyle(
-                        color: Colors.white60,
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ..._sugestoes(resultadosCategoria).map(
-                      (item) => ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(
-                          Icons.lightbulb_outline,
-                          color: verde,
-                        ),
-                        title: Text(
-                          item.$1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.$1,
+                                      style: const TextStyle(
+                                        color: AppColors.text,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      item.$2,
+                                      style: const TextStyle(
+                                        color: AppColors.muted,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.primary,
+                              ),
+                            ],
                           ),
                         ),
-                        subtitle: Text(
-                          item.$2,
-                          style: const TextStyle(color: Colors.white60),
-                        ),
-                        trailing: const Icon(
-                          Icons.arrow_forward,
-                          color: Colors.white60,
-                        ),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => item.$3()),
-                        ),
                       ),
-                    ),
-                    if (_sugestoes(resultadosCategoria).isEmpty)
-                      const Text(
-                        'Nenhuma habilidade precisa de reforço com os dados atuais. Continue praticando para manter essa evolução.',
-                        style: TextStyle(color: Colors.white70, height: 1.4),
+                    if (total == 0)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16),
+                        child: Text(
+                          'Seus exercícios aparecerão aqui conforme você praticar.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.muted),
+                        ),
                       ),
                   ],
                 ),
               ),
-              if (total == 0)
-                const Padding(
-                  padding: EdgeInsets.only(top: 20),
-                  child: Text(
-                    'Seus exercícios aparecerão aqui conforme você praticar.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ),
             ],
           );
         },
+        ),
       ),
     );
   }
@@ -451,58 +406,15 @@ class PerformanceScreen extends StatelessWidget {
     Navigator.push(context, MaterialPageRoute(builder: (_) => destino));
   }
 
-  Widget _metric(String titulo, String valor, IconData icone) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-    decoration: BoxDecoration(
-      color: const Color(0xFF2D2429),
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icone, color: verde, size: 20),
-        const SizedBox(height: 8),
-        Text(
-          valor,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 19,
-          ),
-        ),
-        Text(
-          titulo,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white70, fontSize: 11),
-        ),
-      ],
-    ),
-  );
-
-  Widget _painel({required String titulo, required Widget child}) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: const Color(0xFF2D2429),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: Colors.white10),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 14),
-        child,
-      ],
-    ),
-  );
+  static IconData _iconeTipo(String tipo) => switch (tipo) {
+    'Intervalo' => Icons.graphic_eq_rounded,
+    'Violão' => Icons.music_note_outlined,
+    'Teórico' => Icons.menu_book_outlined,
+    'Ritmo' => Icons.timer_outlined,
+    'Escala' => Icons.show_chart_rounded,
+    'Acorde' => Icons.piano_outlined,
+    _ => Icons.hearing_rounded,
+  };
 
   static int _numero(dynamic valor) => valor is num ? valor.toInt() : 0;
 
@@ -513,12 +425,134 @@ class PerformanceScreen extends StatelessWidget {
       const ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][data.weekday - 1];
 
   static String _duracao(int segundos) {
-    if (segundos < 60) return '$segundos s';
+    if (segundos < 60) return '${segundos}s';
     final minutos = segundos ~/ 60;
-    final resto = segundos % 60;
-    if (minutos < 60) {
-      return resto == 0 ? '$minutos min' : '$minutos min $resto s';
-    }
-    return '${minutos ~/ 60} h ${minutos % 60} min';
+    if (minutos < 60) return '${minutos}min';
+    return '${minutos ~/ 60}h ${minutos % 60}min';
   }
+}
+
+/// Gráfico de barras da precisão diária, com linhas de grade de 0 a 100.
+class _GraficoPrecisao extends StatelessWidget {
+  const _GraficoPrecisao({required this.dias, required this.percentuais});
+
+  final List<String> dias;
+
+  /// `null` quando não houve exercício no dia.
+  final List<double?> percentuais;
+
+  static const _altura = 190.0;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: _altura + 26,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 34,
+          height: _altura,
+          child: Stack(
+            children: [
+              for (var marca = 0; marca <= 100; marca += 20)
+                Positioned(
+                  right: 6,
+                  top: _altura * (1 - marca / 100) - 8,
+                  child: Text(
+                    '$marca',
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Column(
+            children: [
+              SizedBox(
+                height: _altura,
+                child: Stack(
+                  children: [
+                    for (var marca = 0; marca <= 100; marca += 20)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: _altura * (1 - marca / 100),
+                        child: Container(
+                          height: 1,
+                          color: AppColors.border.withValues(alpha: .7),
+                        ),
+                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        for (final percentual in percentuais)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 5),
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween<double>(
+                                  begin: 0,
+                                  end: percentual == null
+                                      ? 3.0
+                                      : (_altura * percentual / 100)
+                                            .clamp(3.0, _altura)
+                                            .toDouble(),
+                                ),
+                                duration: const Duration(milliseconds: 600),
+                                curve: Curves.easeOutCubic,
+                                builder: (context, altura, _) => Container(
+                                  height: altura,
+                                  decoration: BoxDecoration(
+                                    gradient: percentual == null
+                                        ? null
+                                        : const LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Color(0xFFF7CD86),
+                                              Color(0xFFDDA552),
+                                            ],
+                                          ),
+                                    color: percentual == null
+                                        ? AppColors.surfaceHighlight
+                                        : null,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (final dia in dias)
+                    Expanded(
+                      child: Text(
+                        dia,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

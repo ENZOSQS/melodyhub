@@ -8,14 +8,16 @@ import 'package:flutter/material.dart';
 
 import 'achievements_screen.dart';
 import 'history_screen.dart';
-import 'instrument_catalog_screen.dart';
 import 'icon_shop_screen.dart';
 import 'learning_path_screen.dart';
 import 'profile_screen.dart';
-import 'performance_screen.dart';
-import 'exercise_catalog_screen.dart';
+import 'guitar_note_exercise_screen.dart';
+import 'music_concepts_screen.dart';
+import 'rhythm_exercise_screen.dart';
+import '../domain/continue_rules.dart';
 import '../theme/app_theme.dart';
 import '../services/progress_service.dart';
+import '../widgets/mh_ui.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,8 +27,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const Color verde = AppColors.primary;
-  static const Color verdeEscuro = AppColors.primary;
   static const Color preto = AppColors.background;
 
   final ProgressService _progressService = ProgressService();
@@ -74,7 +74,7 @@ class _HomePageState extends State<HomePage> {
         body: Center(
           child: Text(
             'Usuário não autenticado.',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: AppColors.text),
           ),
         ),
       );
@@ -82,731 +82,423 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Melody Hub',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Perfil',
-            icon: const Icon(Icons.person_outline),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      body: SafeArea(
+        child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(usuario.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(
+                child: Text(
+                  'Não foi possível carregar seu progresso.',
+                  style: TextStyle(color: AppColors.text),
+                ),
               );
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(usuario.uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(
-              child: Text(
-                'Não foi possível carregar seu progresso.',
-                style: TextStyle(color: Colors.white),
-              ),
-            );
-          }
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(color: verde));
-          }
-          final dados = snapshot.data?.data() ?? {};
+            }
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final dados = snapshot.data?.data() ?? {};
+            final nome = (dados['nome'] ?? usuario.displayName ?? 'Aluno')
+                .toString();
+            final primeiroNome = nome.trim().split(RegExp(r'\s+')).first;
+            final xp = _numero(dados['xp']);
+            final nivel = _numero(dados['nivel']);
+            final pontos = _numero(dados['pontos']);
+            final sequenciaDiasAtual = _progressService
+                .calcularSequenciaDiasAtual(dados);
+            final conquistas = List<String>.from(dados['conquistas'] ?? []);
 
-          final nome = dados['nome'] ?? usuario.displayName ?? 'Aluno';
-
-          final xp = _numero(dados['xp']);
-          final nivel = _numero(dados['nivel']);
-          final exercicios = _numero(dados['exerciciosRespondidos']);
-          final acertos = _numero(dados['acertos']);
-          final erros = _numero(dados['erros']);
-          final sequenciaDiasAtual = _progressService
-              .calcularSequenciaDiasAtual(dados);
-          final precisao = exercicios == 0
-              ? 0
-              : (acertos * 100 / exercicios).round();
-
-          final conquistas = List<String>.from(dados['conquistas'] ?? []);
-
-          final progresso = _calcularProgresso(xp);
-          final xpProximo = _xpProximoNivel(xp);
-
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSaudacao(nome.toString(), nivel),
-                  const SizedBox(height: 16),
-                  _buildCardXP(
-                    xp: xp,
-                    pontos: _numero(dados['pontos']),
-                    nivel: nivel,
-                    progresso: progresso,
-                    xpProximo: xpProximo,
-                  ),
-                  const SizedBox(height: 14),
-                  _buildEstatisticas(
-                    exercicios: exercicios,
-                    acertos: acertos,
-                    erros: erros,
-                    sequenciaDiasAtual: sequenciaDiasAtual,
-                    precisao: precisao,
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Aprender',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final tileWidth = (constraints.maxWidth - 10) / 2;
-                      return Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          SizedBox(
-                            width: tileWidth,
-                            child: _buildLearningTile(
-                              context,
-                              icon: Icons.piano,
-                              title: 'Prática',
-                              detail: 'Notas e memória auditiva',
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LearningPathScreen(
-                                    track: LearningTrack.pratica,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: tileWidth,
-                            child: _buildLearningTile(
-                              context,
-                              icon: Icons.menu_book_rounded,
-                              title: 'Teoria',
-                              detail: 'Conceitos por etapas',
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LearningPathScreen(
-                                    track: LearningTrack.teoria,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: tileWidth,
-                            child: _buildLearningTile(
-                              context,
-                              icon: Icons.graphic_eq_rounded,
-                              title: 'Intervalos',
-                              detail: 'Distância entre notas',
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LearningPathScreen(
-                                    track: LearningTrack.intervalos,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  _buildOpcaoPrincipal(
-                    context,
-                    icone: Icons.explore_outlined,
-                    titulo: 'Explorar exercícios',
-                    descricao:
-                        'Busque práticas por habilidade, nível ou instrumento.',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ExerciseCatalogScreen(),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  _buildOpcaoPrincipal(
-                    context,
-                    icone: Icons.storefront,
-                    titulo:
-                        'Loja de ícones · ${_numero(dados['pontos'])} pontos',
-                    descricao:
-                        'Acumule pontos nos exercícios e personalize seu perfil.',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const IconShopScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  _buildOpcaoPrincipal(
-                    context,
-                    icone: Icons.queue_music_rounded,
-                    titulo: 'Simuladores de instrumentos',
-                    descricao:
-                        'Explore o teclado e o braço do violão em um só lugar.',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const InstrumentCatalogScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  const Text(
-                    'Meu progresso',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Row(
+            return ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                MelodyHeader(onNotificacoes: () => _abrir(const ProfileScreen())),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _buildAtalho(
-                          context,
-                          icone: Icons.history,
-                          titulo: 'Histórico',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HistoryScreen(),
-                              ),
-                            );
-                          },
+                      Text(
+                        'Olá, ${primeiroNome.isEmpty ? 'Aluno' : primeiroNome}!',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.text,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -.5,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildAtalho(
-                          context,
-                          icone: Icons.insights_outlined,
-                          titulo: 'Desempenho',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PerformanceScreen(),
-                              ),
-                            );
-                          },
+                      const SizedBox(height: 18),
+                      _cartaoNivel(
+                        nivel: nivel,
+                        xp: xp,
+                        sequenciaDias: sequenciaDiasAtual,
+                      ),
+                      const SizedBox(height: 16),
+                      _cartaoContinuar(),
+                      const SizedBox(height: 16),
+                      _atalhos(),
+                      const MhSectionTitle('Mais opções'),
+                      _opcao(
+                        icone: Icons.piano_outlined,
+                        titulo: 'Prática de notas',
+                        descricao: 'Notas e memória auditiva em etapas.',
+                        destino: const LearningPathScreen(
+                          track: LearningTrack.pratica,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildAtalho(
-                          context,
-                          icone: Icons.emoji_events,
-                          titulo: 'Conquistas (${conquistas.length})',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AchievementsScreen(),
-                              ),
-                            );
-                          },
-                        ),
+                      _opcao(
+                        icone: Icons.storefront_outlined,
+                        titulo: 'Loja de ícones · $pontos pontos',
+                        descricao:
+                            'Acumule pontos nos exercícios e personalize seu perfil.',
+                        destino: const IconShopScreen(),
+                      ),
+                      _opcao(
+                        icone: Icons.emoji_events_outlined,
+                        titulo: 'Conquistas (${conquistas.length})',
+                        descricao: 'Veja as medalhas que você já desbloqueou.',
+                        destino: const AchievementsScreen(),
+                      ),
+                      _opcao(
+                        icone: Icons.history_rounded,
+                        titulo: 'Histórico',
+                        descricao: 'Revise suas respostas e a duração de cada uma.',
+                        destino: const HistoryScreen(),
+                      ),
+                      _opcao(
+                        icone: Icons.person_outline_rounded,
+                        titulo: 'Meu Perfil',
+                        descricao: 'Nome, preferências e lembretes de estudo.',
+                        destino: const ProfileScreen(),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 10),
-
-                  _buildOpcaoSecundaria(
-                    context,
-                    icone: Icons.person_outline,
-                    titulo: 'Meu Perfil',
-                    descricao: 'Visualize e edite suas informações.',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ProfileScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildSaudacao(String nome, int nivel) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  void _abrir(Widget destino) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => destino));
+  }
+
+  Widget _cartaoNivel({
+    required int nivel,
+    required int xp,
+    required int sequenciaDias,
+  }) {
+    final progresso = _calcularProgresso(xp);
+    final maximo = _xpProximoNivel(xp) == 0;
+    return MhCard(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+      child: Column(
+        children: [
+          Row(
             children: [
-              const Text(
-                'Olá,',
-                style: TextStyle(color: Colors.white70, fontSize: 15),
+              const SizedBox(
+                width: 92,
+                height: 92,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      color: AppColors.primary,
+                      size: 92,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: Icon(
+                        Icons.music_note_rounded,
+                        color: AppColors.primary,
+                        size: 38,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                nome,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 25,
-                  fontWeight: FontWeight.bold,
+              const MhDividerVertical(altura: 76),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nível $nivel',
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      maximo
+                          ? '$xp XP · nível máximo'
+                          : '$xp / ${_proximoNivelPorXP(xp)} XP',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 17,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: progresso),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) =>
+                            LinearProgressIndicator(
+                              value: value,
+                              minHeight: 14,
+                              backgroundColor: AppColors.surfaceHighlight,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                AppColors.primary,
+                              ),
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-          decoration: BoxDecoration(
-            color: verde.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: verde.withValues(alpha: 0.4)),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.local_fire_department_rounded,
+                color: AppColors.primary,
+                size: 30,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Sequência: ',
+                style: TextStyle(color: AppColors.text, fontSize: 18),
+              ),
+              Text(
+                '$sequenciaDias ${sequenciaDias == 1 ? 'dia' : 'dias'}',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
-          child: Text(
-            'Nível $nivel',
-            style: const TextStyle(color: verde, fontWeight: FontWeight.bold),
+        ],
+      ),
+    );
+  }
+
+  /// Cartão "Continue de onde parou", calculado a partir do último evento do
+  /// histórico. Sem histórico, sugere começar pela teoria.
+  Widget _cartaoContinuar() =>
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _ultimoEvento,
+        builder: (context, snapshot) {
+          final docs = snapshot.data?.docs ?? const [];
+          final sugestao =
+              sugestaoContinuar(docs.isEmpty ? null : docs.first.data()) ??
+              const SugestaoContinuar(
+                atividade: AtividadeContinuar.teoria,
+                rotulo: 'Teoria – Etapa 1',
+                etapa: 1,
+              );
+          final semHistorico = docs.isEmpty;
+          return MhCard(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  semHistorico ? 'Comece por aqui' : 'Continue de onde parou',
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    MhIconTile(
+                      icone: _iconeAtividade(sugestao.atividade),
+                      cor: AppColors.secondary,
+                      tamanho: 64,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: const BorderSide(color: AppColors.border),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => _abrir(_destino(sugestao.atividade)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 18,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    sugestao.rotulo,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.text,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: AppColors.primary,
+                                  size: 30,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _ultimoEvento =
+      _progressService.ouvirHistorico(limite: 1);
+
+  Widget _atalhos() {
+    final itens = <(IconData, String, AtividadeContinuar)>[
+      (Icons.menu_book_outlined, 'Teoria', AtividadeContinuar.teoria),
+      (Icons.graphic_eq_rounded, 'Intervalos', AtividadeContinuar.intervalos),
+      (Icons.timer_outlined, 'Ritmo', AtividadeContinuar.ritmo),
+      (Icons.music_note_outlined, 'Violão', AtividadeContinuar.violao),
+    ];
+    return Row(
+      children: [
+        for (var i = 0; i < itens.length; i++) ...[
+          if (i > 0) const SizedBox(width: 10),
+          Expanded(
+            child: MhCard(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
+              onTap: () => _abrir(_destino(itens[i].$3)),
+              child: Column(
+                children: [
+                  Icon(itens[i].$1, color: AppColors.primary, size: 34),
+                  const SizedBox(height: 12),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      itens[i].$2,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
 
-  Widget _buildCardXP({
-    required int xp,
-    required int pontos,
-    required int nivel,
-    required double progresso,
-    required int xpProximo,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.surfaceRaised, AppColors.surface],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.star_rounded, color: verde, size: 23),
-                  SizedBox(width: 8),
-                  Text(
-                    'Seu progresso',
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '$xp XP',
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    '$pontos pontos',
-                    style: const TextStyle(
-                      color: verdeEscuro,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: progresso),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, _) => LinearProgressIndicator(
-                value: value,
-                minHeight: 9,
-                backgroundColor: AppColors.surfaceHighlight,
-                valueColor: const AlwaysStoppedAnimation<Color>(verde),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Nível $nivel',
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-              Text(
-                xpProximo > 0 ? 'Faltam $xpProximo XP' : 'Nível máximo',
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  IconData _iconeAtividade(AtividadeContinuar atividade) => switch (atividade) {
+    AtividadeContinuar.teoria => Icons.menu_book_outlined,
+    AtividadeContinuar.pratica => Icons.piano_outlined,
+    AtividadeContinuar.intervalos => Icons.graphic_eq_rounded,
+    AtividadeContinuar.ritmo => Icons.timer_outlined,
+    AtividadeContinuar.escalas => Icons.show_chart_rounded,
+    AtividadeContinuar.acordes => Icons.piano_outlined,
+    AtividadeContinuar.violao => Icons.music_note_outlined,
+  };
 
-  Widget _buildEstatisticas({
-    required int exercicios,
-    required int acertos,
-    required int erros,
-    required int sequenciaDiasAtual,
-    required int precisao,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Resumo do desempenho',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _estatistica(
-                  Icons.quiz_outlined,
-                  'Exercícios',
-                  '$exercicios',
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _estatistica(
-                  Icons.check_circle_outline,
-                  'Acertos',
-                  '$acertos',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _estatistica(Icons.cancel_outlined, 'Erros', '$erros'),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _estatistica(
-                  Icons.local_fire_department,
-                  'Sequência atual (dias)',
-                  '$sequenciaDiasAtual',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _estatistica(Icons.track_changes, 'Precisão geral', '$precisao%'),
-        ],
-      ),
-    );
-  }
+  Widget _destino(AtividadeContinuar atividade) => switch (atividade) {
+    AtividadeContinuar.teoria => const LearningPathScreen(
+      track: LearningTrack.teoria,
+    ),
+    AtividadeContinuar.pratica => const LearningPathScreen(
+      track: LearningTrack.pratica,
+    ),
+    AtividadeContinuar.intervalos => const LearningPathScreen(
+      track: LearningTrack.intervalos,
+    ),
+    AtividadeContinuar.ritmo => const RhythmExerciseScreen(),
+    AtividadeContinuar.escalas => const MusicConceptsScreen(
+      exercise: ConceptExercise.scale,
+    ),
+    AtividadeContinuar.acordes => const MusicConceptsScreen(
+      exercise: ConceptExercise.chord,
+    ),
+    AtividadeContinuar.violao => const GuitarNoteExerciseScreen(),
+  };
 
-  Widget _estatistica(IconData icone, String titulo, String valor) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(13),
-      ),
+  Widget _opcao({
+    required IconData icone,
+    required String titulo,
+    required String descricao,
+    required Widget destino,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: MhCard(
+      padding: const EdgeInsets.all(14),
+      onTap: () => _abrir(destino),
       child: Row(
         children: [
-          Icon(icone, color: verde, size: 21),
-          const SizedBox(width: 8),
+          MhIconTile(icone: icone, tamanho: 50),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   titulo,
-                  style: const TextStyle(color: Colors.white60, fontSize: 11),
-                ),
-                Text(
-                  valor,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOpcaoPrincipal(
-    BuildContext context, {
-    required IconData icone,
-    required String titulo,
-    required String descricao,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.surfaceHighlight,
-                      AppColors.surfaceRaised.withValues(alpha: 0.72),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Icon(icone, color: verde, size: 28),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      titulo,
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      descricao,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12,
-                        height: 1.25,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.muted),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLearningTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String detail,
-    required VoidCallback onTap,
-  }) => Material(
-    color: AppColors.surface,
-    borderRadius: BorderRadius.circular(20),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Ink(
-        height: 126,
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF342A2E), AppColors.surface],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, color: AppColors.primary, size: 25),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.text,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  detail,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                  descricao,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+        ],
       ),
     ),
   );
-
-  Widget _buildOpcaoSecundaria(
-    BuildContext context, {
-    required IconData icone,
-    required String titulo,
-    required String descricao,
-    required VoidCallback onTap,
-  }) {
-    return _buildOpcaoPrincipal(
-      context,
-      icone: icone,
-      titulo: titulo,
-      descricao: descricao,
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildAtalho(
-    BuildContext context, {
-    required IconData icone,
-    required String titulo,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-          child: Column(
-            children: [
-              Icon(icone, color: verde, size: 27),
-              const SizedBox(height: 7),
-              Text(
-                titulo,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.text,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   double _calcularProgresso(int xp) {
     if (xp >= 1000) {

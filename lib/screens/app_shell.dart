@@ -55,18 +55,18 @@ class _AppShellState extends State<AppShell> {
       label: 'Início',
     ),
     NavigationDestination(
-      icon: Icon(Icons.explore_outlined),
-      selectedIcon: Icon(Icons.explore_rounded),
+      icon: Icon(Icons.school_outlined),
+      selectedIcon: Icon(Icons.school_rounded),
       label: 'Aprender',
     ),
     NavigationDestination(
-      icon: Icon(Icons.piano_outlined),
-      selectedIcon: Icon(Icons.piano),
+      icon: Icon(Icons.music_note_outlined),
+      selectedIcon: Icon(Icons.music_note_rounded),
       label: 'Tocar',
     ),
     NavigationDestination(
-      icon: Icon(Icons.insights_outlined),
-      selectedIcon: Icon(Icons.insights),
+      icon: Icon(Icons.bar_chart_outlined),
+      selectedIcon: Icon(Icons.bar_chart_rounded),
       label: 'Progresso',
     ),
   ];
@@ -132,18 +132,18 @@ class _AppShellState extends State<AppShell> {
                     label: Text('Início'),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.explore_outlined),
-                    selectedIcon: Icon(Icons.explore_rounded),
+                    icon: Icon(Icons.school_outlined),
+                    selectedIcon: Icon(Icons.school_rounded),
                     label: Text('Aprender'),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.piano_outlined),
-                    selectedIcon: Icon(Icons.piano),
+                    icon: Icon(Icons.music_note_outlined),
+                    selectedIcon: Icon(Icons.music_note_rounded),
                     label: Text('Tocar'),
                   ),
                   NavigationRailDestination(
-                    icon: Icon(Icons.insights_outlined),
-                    selectedIcon: Icon(Icons.insights),
+                    icon: Icon(Icons.bar_chart_outlined),
+                    selectedIcon: Icon(Icons.bar_chart_rounded),
                     label: Text('Progresso'),
                   ),
                 ],
@@ -161,8 +161,6 @@ class _AppShellState extends State<AppShell> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selected,
           onDestinationSelected: (index) => setState(() => _selected = index),
-          backgroundColor: AppColors.surface,
-          indicatorColor: AppColors.primary.withValues(alpha: .18),
           destinations: _destinations,
         ),
       );

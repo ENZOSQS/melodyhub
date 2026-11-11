@@ -9,6 +9,7 @@ import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
 import '../services/reminder_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/mh_ui.dart';
 import 'icon_shop_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -284,16 +285,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Meu Perfil',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('usuarios')
@@ -342,114 +333,137 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: AppColors.surfaceRaised,
-                          child: fotoUrl == null
-                              ? _iconePerfil(
-                                  iconePerfilId,
-                                  nomeFallback: nome.toString(),
-                                )
-                              : ClipOval(
-                                  child: Image.network(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 28),
+              children: [
+                const MelodyHeader(),
+                const MhPageTitle('Perfil'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 112,
+                            height: 112,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.surfaceRaised,
+                              border: Border.all(
+                                color: AppColors.secondary,
+                                width: 2.5,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            clipBehavior: Clip.antiAlias,
+                            child: fotoUrl == null
+                                ? _iconePerfil(
+                                    iconePerfilId,
+                                    size: 58,
+                                    nomeFallback: nome.toString(),
+                                  )
+                                : Image.network(
                                     fotoUrl,
-                                    width: 80,
-                                    height: 80,
+                                    width: 112,
+                                    height: 112,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => _iconePerfil(
                                       iconePerfilId,
+                                      size: 58,
                                       nomeFallback: nome.toString(),
                                     ),
                                   ),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  nome.toString(),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.text,
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          nome.toString(),
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                                const SizedBox(height: 2),
+                                Text(
+                                  usuario.email ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: AppColors.muted),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Nível $nivel',
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const IconShopScreen(initialTab: 1),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          usuario.email ?? '',
-                          style: const TextStyle(color: AppColors.muted),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Nível $nivel',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
+                        icon: const Icon(Icons.collections_outlined),
+                        label: const Text('Abrir minha coleção'),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildNomenclatura(),
+                      const SizedBox(height: 16),
+                      _buildLembrete(),
+                      const SizedBox(height: 16),
+                      _buildPreferencias(),
+                      const SizedBox(height: 16),
+                      _buildNome(),
+                      const SizedBox(height: 16),
+                      _buildDesempenho(
+                        xp,
+                        nivel,
+                        exercicios,
+                        acertos,
+                        erros,
+                        sequencia,
+                        melhorSequenciaDias,
+                        precisao,
+                        conquistas.length,
+                      ),
+                      const SizedBox(height: 22),
+                      SizedBox(
+                        height: 60,
+                        child: OutlinedButton.icon(
+                          onPressed: _logout,
+                          icon: const Icon(Icons.logout_rounded),
+                          label: const Text(
+                            'Sair',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.secondary,
+                            side: const BorderSide(
+                              color: AppColors.secondary,
+                              width: 1.6,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const IconShopScreen(initialTab: 1),
-                        ),
                       ),
-                      icon: const Icon(Icons.collections_outlined),
-                      label: const Text('Abrir minha coleção'),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  _buildNome(),
-                  const SizedBox(height: 14),
-                  _buildPreferencias(),
-                  const SizedBox(height: 14),
-                  _buildDesempenho(
-                    xp,
-                    nivel,
-                    exercicios,
-                    acertos,
-                    erros,
-                    sequencia,
-                    melhorSequenciaDias,
-                    precisao,
-                    conquistas.length,
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: _logout,
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Sair da conta'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.text,
-                        side: const BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
@@ -457,34 +471,217 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPreferencias() => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(17),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
+  Widget _titulo(String texto) => Text(
+    texto,
+    style: const TextStyle(
+      color: AppColors.text,
+      fontSize: 21,
+      fontWeight: FontWeight.w800,
     ),
+  );
+
+  Widget _buildNomenclatura() => MhCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Preferências de estudo',
-          style: TextStyle(
-            color: AppColors.text,
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
+        _titulo('Nomenclatura das notas'),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(child: _opcaoRadio('Dó-Ré-Mi', 'solfejo')),
+            const SizedBox(width: 12),
+            Expanded(child: _opcaoRadio('C-D-E', 'cifragem')),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _opcaoRadio(String rotulo, String valor) {
+    final selecionado = _tipoNota == valor;
+    return Semantics(
+      selected: selecionado,
+      button: true,
+      child: Material(
+        color: selecionado
+            ? AppColors.primary.withValues(alpha: .14)
+            : AppColors.surfaceRaised,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: selecionado ? AppColors.primary : AppColors.border,
+            width: selecionado ? 1.6 : 1,
           ),
         ),
-        const SizedBox(height: 10),
-        const Text('Nomes das notas', style: TextStyle(color: AppColors.muted)),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'solfejo', label: Text('Dó–Ré–Mi')),
-            ButtonSegment(value: 'cifragem', label: Text('C–D–E')),
-          ],
-          selected: {_tipoNota},
-          onSelectionChanged: (values) => _salvarNomenclatura(values.first),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _salvarNomenclatura(valor),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            child: Row(
+              children: [
+                Icon(
+                  selecionado
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_off_rounded,
+                  color: selecionado ? AppColors.primary : AppColors.muted,
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    rotulo,
+                    style: const TextStyle(color: AppColors.text, fontSize: 18),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLembrete() {
+    const rotulos = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+    const nomes = [
+      'segunda-feira',
+      'terça-feira',
+      'quarta-feira',
+      'quinta-feira',
+      'sexta-feira',
+      'sábado',
+      'domingo',
+    ];
+    return MhCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _titulo('Lembrete de estudo')),
+              Switch(value: _lembreteAtivo, onChanged: _definirLembrete),
+            ],
+          ),
+          const SizedBox(height: 12),
+          MhCard(
+            corFundo: AppColors.background.withValues(alpha: .35),
+            padding: const EdgeInsets.all(16),
+            onTap: _escolherHora,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.schedule_rounded,
+                  color: AppColors.secondary,
+                  size: 34,
+                ),
+                const SizedBox(width: 18),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Horário',
+                      style: TextStyle(color: AppColors.text, fontSize: 15),
+                    ),
+                    Text(
+                      _horaLembrete.format(context),
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          MhCard(
+            corFundo: AppColors.background.withValues(alpha: .35),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  color: AppColors.secondary,
+                  size: 32,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Dias da semana',
+                        style: TextStyle(color: AppColors.text, fontSize: 15),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: List.generate(7, (index) {
+                          final dia = index + 1;
+                          final ativo = _diasLembrete.contains(dia);
+                          return Tooltip(
+                            message: nomes[index],
+                            child: Material(
+                              color: ativo
+                                  ? AppColors.primary
+                                  : AppColors.surfaceRaised,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: ativo
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                ),
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () => _alternarDiaLembrete(dia),
+                                child: SizedBox(
+                                  width: 36,
+                                  height: 40,
+                                  child: Center(
+                                    child: Text(
+                                      rotulos[index],
+                                      style: TextStyle(
+                                        color: ativo
+                                            ? AppColors.background
+                                            : AppColors.text,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'O lembrete fica salvo neste aparelho. A disponibilidade depende das permissões do sistema.',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferencias() => MhCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _titulo('Preferências de estudo'),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text(
@@ -512,59 +709,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             setState(() => _bpm = bpm);
             AppPreferences.setDefaultBpm(bpm);
           },
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'Lembrete de estudo',
-            style: TextStyle(color: AppColors.text),
-          ),
-          subtitle: Text(
-            'Aviso local às ${_horaLembrete.format(context)} nos dias selecionados',
-            style: const TextStyle(color: AppColors.muted),
-          ),
-          value: _lembreteAtivo,
-          onChanged: _definirLembrete,
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _escolherHora,
-            icon: const Icon(Icons.schedule),
-            label: Text('Alterar horário · ${_horaLembrete.format(context)}'),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 6,
-          children: List.generate(7, (index) {
-            final dia = index + 1;
-            const rotulos = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
-            const nomes = [
-              'segunda-feira',
-              'terça-feira',
-              'quarta-feira',
-              'quinta-feira',
-              'sexta-feira',
-              'sábado',
-              'domingo',
-            ];
-            return Tooltip(
-              message: nomes[index],
-              child: FilterChip(
-                label: Text(rotulos[index]),
-                selected: _diasLembrete.contains(dia),
-                onSelected: (_) => _alternarDiaLembrete(dia),
-                selectedColor: AppColors.primary.withValues(alpha: .25),
-                checkmarkColor: AppColors.primary,
-                labelStyle: const TextStyle(color: AppColors.text),
-              ),
-            );
-          }),
-        ),
-        const Text(
-          'O lembrete fica salvo neste aparelho. A disponibilidade depende das permissões do sistema.',
-          style: TextStyle(color: AppColors.muted, fontSize: 12),
         ),
       ],
     ),

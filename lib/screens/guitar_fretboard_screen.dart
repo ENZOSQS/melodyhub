@@ -7,6 +7,7 @@ import '../services/app_preferences.dart';
 import '../theme/app_theme.dart';
 import '../utils/guitar_sample_map.dart';
 import '../utils/note_names.dart';
+import '../utils/orientacao.dart';
 import '../widgets/guitar_fretboard.dart';
 
 class GuitarFretboardScreen extends StatefulWidget {
@@ -29,7 +30,14 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
   @override
   void initState() {
     super.initState();
+    usarPaisagem();
     _load();
+  }
+
+  @override
+  void dispose() {
+    voltarRetrato();
+    super.dispose();
   }
 
   Future<void> _load() async {

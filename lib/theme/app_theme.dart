@@ -56,44 +56,95 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceRaised,
+        fillColor: AppColors.surface,
         hintStyle: const TextStyle(color: AppColors.muted),
+        labelStyle: const TextStyle(color: AppColors.muted),
+        prefixIconColor: AppColors.muted,
+        suffixIconColor: AppColors.muted,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
+          horizontal: 20,
+          vertical: 20,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.secondary,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: Colors.transparent,
+        height: 74,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (estados) => TextStyle(
+            fontSize: 13,
+            fontWeight: estados.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+            color: estados.contains(WidgetState.selected)
+                ? AppColors.primary
+                : AppColors.muted,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (estados) => IconThemeData(
+            size: 27,
+            color: estados.contains(WidgetState.selected)
+                ? AppColors.primary
+                : AppColors.muted,
+          ),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? AppColors.text
+              : AppColors.muted,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.surfaceHighlight,
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.muted,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.text,
-          side: const BorderSide(color: AppColors.border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary, width: 1.4),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
         ),
       ),
       tabBarTheme: const TabBarThemeData(

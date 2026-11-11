@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/mh_ui.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -212,119 +213,37 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF171316),
-
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
-
-              child: Container(
-                padding: const EdgeInsets.all(28),
-
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border),
-
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-
+              child: AutofillGroup(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // LOGO
-                    Center(
-                      child: Container(
-                        height: 75,
-                        width: 75,
-
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceRaised,
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-
-                        child: const Icon(
-                          Icons.music_note,
-                          color: Color(0xFFE9B96E),
-                          size: 42,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // NOME
-                    const Text(
-                      'Melody Hub',
-                      textAlign: TextAlign.center,
-
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    const Text(
-                      'Aprenda música de um jeito mais divertido.',
-                      textAlign: TextAlign.center,
-
-                      style: TextStyle(color: AppColors.muted, fontSize: 15),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // TÍTULO
-                    const Text(
-                      'Bem-vindo de volta!',
-
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // E-MAIL
+                    const Center(child: MelodyHubLogo(vertical: true, scale: 2)),
+                    const SizedBox(height: 56),
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
                       textInputAction: TextInputAction.next,
                       onSubmitted: (_) => FocusScope.of(context).nextFocus(),
-
                       style: const TextStyle(color: AppColors.text),
-
                       decoration: InputDecoration(
                         labelText: 'E-mail',
-
-                        prefixIcon: const Icon(
-                          Icons.email_outlined,
-                          color: AppColors.primary,
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.only(left: 12, right: 6),
+                          child: Icon(Icons.mail_outline_rounded),
                         ),
-
                         suffixIcon: emailsSalvos.isEmpty
                             ? null
                             : PopupMenuButton<String>(
                                 tooltip: 'E-mails usados recentemente',
-                                icon: const Icon(
-                                  Icons.arrow_drop_down,
-                                  color: AppColors.primary,
-                                ),
+                                icon: const Icon(Icons.arrow_drop_down),
                                 onSelected: (email) {
                                   setState(() => emailController.text = email);
                                 },
@@ -337,69 +256,50 @@ class _LoginPageState extends State<LoginPage> {
                                     )
                                     .toList(),
                               ),
-
-                        filled: true,
-                        fillColor: AppColors.surfaceRaised,
-
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // SENHA
                     TextField(
                       controller: senhaController,
                       obscureText: !mostrarSenha,
-
+                      autofillHints: const [AutofillHints.password],
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) {
+                        if (!carregando) fazerLogin();
+                      },
                       style: const TextStyle(color: AppColors.text),
-
                       decoration: InputDecoration(
                         labelText: 'Senha',
-
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: AppColors.primary,
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.only(left: 12, right: 6),
+                          child: Icon(Icons.lock_outline_rounded),
                         ),
-
                         suffixIcon: IconButton(
+                          tooltip: mostrarSenha
+                              ? 'Ocultar senha'
+                              : 'Mostrar senha',
                           onPressed: () {
-                            setState(() {
-                              mostrarSenha = !mostrarSenha;
-                            });
+                            setState(() => mostrarSenha = !mostrarSenha);
                           },
-
                           icon: Icon(
                             mostrarSenha
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-
-                            color: AppColors.muted,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
-                        ),
-
-                        filled: true,
-                        fillColor: AppColors.surfaceRaised,
-
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: carregando ? null : recuperarSenha,
-                        child: const Text('Esqueci minha senha'),
+                        child: const Text(
+                          'Esqueci minha senha',
+                          style: TextStyle(fontSize: 15),
+                        ),
                       ),
                     ),
-
-                    if (kIsWeb) ...[
+                    if (kIsWeb)
                       CheckboxListTile(
                         value: manterConectado,
                         onChanged: carregando
@@ -428,81 +328,51 @@ class _LoginPageState extends State<LoginPage> {
                           style: TextStyle(color: AppColors.muted),
                         ),
                       ),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    // BOTÃO ENTRAR
+                    const SizedBox(height: 28),
                     SizedBox(
-                      height: 54,
-
-                      child: ElevatedButton(
+                      height: 58,
+                      child: FilledButton(
                         onPressed: carregando ? null : fazerLogin,
-
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE9B96E),
-                          foregroundColor: AppColors.background,
-                          elevation: 0,
-
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-
                         child: carregando
                             ? const SizedBox(
                                 height: 22,
                                 width: 22,
-
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
+                                  color: AppColors.background,
                                 ),
                               )
                             : const Text(
-                                'ENTRAR',
-
+                                'Entrar',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                       ),
                     ),
-
-                    const SizedBox(height: 18),
-
-                    // DIVISOR
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-
-                          child: Text(
-                            'ou',
-
-                            style: TextStyle(color: Colors.black45),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: TextButton(
+                        onPressed: abrirCadastro,
+                        child: const Text.rich(
+                          TextSpan(
+                            text: 'Não tem conta? ',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Cadastre-se',
+                                style: TextStyle(
+                                  color: AppColors.secondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                      ],
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // CADASTRO
-                    TextButton(
-                      onPressed: abrirCadastro,
-
-                      child: const Text(
-                        'Não tem uma conta? Cadastre-se',
-
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
                         ),
                       ),
                     ),

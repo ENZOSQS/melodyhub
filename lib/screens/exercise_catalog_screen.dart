@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/mh_ui.dart';
 import '../services/app_preferences.dart';
 import 'guitar_fretboard_screen.dart';
 import 'guitar_note_exercise_screen.dart';
@@ -9,6 +10,7 @@ import 'history_screen.dart';
 import 'learning_path_screen.dart';
 import 'music_concepts_screen.dart';
 import 'performance_screen.dart';
+import 'profile_screen.dart';
 import 'rhythm_exercise_screen.dart';
 
 class _Activity {
@@ -153,119 +155,214 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
     }).toList();
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        foregroundColor: Colors.white,
-        title: const Text('Explorar atividades'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'Escolha uma habilidade para praticar. Cada exercício registra seu progresso e oferece feedback para aprender com as respostas.',
-            style: TextStyle(color: Colors.white70, height: 1.4),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _search,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Buscar habilidade ou exercício',
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            MelodyHeader(
+              onNotificacoes: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          _filter('Habilidade', _kind, [
-            'Todos',
-            'Prática',
-            'Audição',
-            'Teoria',
-            'Ritmo',
-            'Harmonia',
-            'Progresso',
-          ], (value) => setState(() => _kind = value)),
-          _filter('Nível', _level, [
-            'Todos',
-            'Iniciante',
-            'Intermediário',
-            'Avançado',
-          ], (value) => setState(() => _level = value)),
-          _filter('Instrumento', _instrument, [
-            'Todos',
-            'Teclado',
-            'Violão',
-          ], _setInstrument),
-          if (_instrument != 'Todos') ...[
-            const SizedBox(height: 8),
-            Card(
-              color: AppColors.surface,
-              child: ListTile(
-                leading: Icon(
-                  _instrument == 'Violão' ? Icons.music_note : Icons.piano,
-                  color: AppColors.primary,
-                ),
-                title: Text(
-                  'Abrir simulador de $_instrument',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                trailing: const Icon(Icons.open_in_new, color: Colors.white70),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => _instrument == 'Violão'
-                        ? const GuitarFretboardScreen()
-                        : const KeyboardScreen(),
+            const MhPageTitle('Aprender'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Instrumento',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final (valor, icone) in const [
+                        ('Todos', null),
+                        ('Teclado', Icons.piano_outlined),
+                        ('Violão', Icons.music_note_outlined),
+                      ])
+                        MhChoiceChip(
+                          texto: valor,
+                          icone: icone,
+                          selecionado: _instrument == valor,
+                          onTap: () => _setInstrument(valor),
+                        ),
+                    ],
+                  ),
+                  if (_instrument != 'Todos') ...[
+                    const SizedBox(height: 18),
+                    MhCard(
+                      destaque: true,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 22,
+                      ),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => _instrument == 'Violão'
+                              ? const GuitarFretboardScreen()
+                              : const KeyboardScreen(),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 76,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: AppColors.secondary,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              _instrument == 'Violão'
+                                  ? Icons.music_note_rounded
+                                  : Icons.piano_rounded,
+                              color: AppColors.text,
+                              size: 34,
+                            ),
+                          ),
+                          const MhDividerVertical(altura: 56),
+                          Expanded(
+                            child: Text(
+                              'Abrir simulador de $_instrument',
+                              style: const TextStyle(
+                                color: AppColors.text,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.primary,
+                            size: 30,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      iconColor: AppColors.primary,
+                      collapsedIconColor: AppColors.muted,
+                      title: const Text(
+                        'Mais filtros',
+                        style: TextStyle(color: AppColors.muted, fontSize: 15),
+                      ),
+                      children: [
+                        TextField(
+                          controller: _search,
+                          onChanged: (_) => setState(() {}),
+                          style: const TextStyle(color: AppColors.text),
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search),
+                            hintText: 'Buscar habilidade ou exercício',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _filter('Habilidade', _kind, [
+                          'Todos',
+                          'Prática',
+                          'Audição',
+                          'Teoria',
+                          'Ritmo',
+                          'Harmonia',
+                          'Progresso',
+                        ], (value) => setState(() => _kind = value)),
+                        _filter('Nível', _level, [
+                          'Todos',
+                          'Iniciante',
+                          'Intermediário',
+                          'Avançado',
+                        ], (value) => setState(() => _level = value)),
+                      ],
+                    ),
+                  ),
+                  const MhSectionTitle('Exercícios'),
+                  if (visible.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Nenhuma atividade encontrada. Ajuste os filtros.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.muted),
+                      ),
+                    ),
+                  for (final activity in visible)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _cartaoAtividade(activity),
+                    ),
+                ],
               ),
             ),
           ],
-          const SizedBox(height: 10),
-          if (visible.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'Nenhuma atividade encontrada. Ajuste os filtros.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70),
-              ),
-            ),
-          ...visible.map(
-            (activity) => Card(
-              color: AppColors.surface,
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.surfaceRaised,
-                  child: Icon(activity.icon, color: AppColors.primary),
-                ),
-                title: Text(
-                  activity.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Text(
-                  '${activity.description}\n${activity.kind} · ${activity.level}',
-                  style: const TextStyle(color: Colors.white60, height: 1.45),
-                ),
-                isThreeLine: true,
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: Colors.white60,
-                ),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => activity.builder()),
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
+
+  Widget _cartaoAtividade(_Activity activity) => MhCard(
+    padding: const EdgeInsets.fromLTRB(16, 16, 10, 16),
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => activity.builder()),
+    ),
+    child: Row(
+      children: [
+        MhIconTile(icone: activity.icon, tamanho: 62),
+        const MhDividerVertical(altura: 54),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                activity.title,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                activity.level == 'Todos'
+                    ? activity.kind
+                    : '${activity.kind} · ${activity.level}',
+                style: const TextStyle(color: AppColors.muted, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        for (final instrumento in activity.instrumentos) ...[
+          const SizedBox(width: 8),
+          MhBadge(
+            texto: instrumento,
+            icone: instrumento == 'Violão'
+                ? Icons.music_note_outlined
+                : Icons.piano_outlined,
+          ),
+        ],
+        const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+      ],
+    ),
+  );
 
   Widget _filter(
     String label,
@@ -278,14 +375,14 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
       children: [
         SizedBox(
           width: 92,
-          child: Text(label, style: const TextStyle(color: Colors.white70)),
+          child: Text(label, style: const TextStyle(color: AppColors.muted)),
         ),
         Expanded(
           child: DropdownButton<String>(
             value: value,
             isExpanded: true,
             dropdownColor: AppColors.surface,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.text),
             items: values
                 .map((v) => DropdownMenuItem(value: v, child: Text(v)))
                 .toList(),

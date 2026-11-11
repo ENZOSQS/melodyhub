@@ -42,7 +42,7 @@ class PianoAnswerKeyboard extends StatelessWidget {
       ).where((midi) => _blackAfterWhite.values.contains(midi % 12)).toList();
 
       return SizedBox(
-        height: 142,
+        height: 196,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -58,11 +58,15 @@ class PianoAnswerKeyboard extends StatelessWidget {
                         duration: const Duration(milliseconds: 120),
                         margin: const EdgeInsets.only(right: 2),
                         decoration: BoxDecoration(
-                          color: selectedMidi.contains(midi)
-                              ? const Color(0xFFFFD68A)
-                              : const Color(0xFFF4EFE7),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: selectedMidi.contains(midi)
+                                ? const [Color(0xFFFFE3A8), Color(0xFFF2C574)]
+                                : const [Color(0xFFE6DDD6), Color(0xFFFBF5F0)],
+                          ),
                           borderRadius: const BorderRadius.vertical(
-                            bottom: Radius.circular(8),
+                            bottom: Radius.circular(10),
                           ),
                           border: Border.all(color: const Color(0xFFB7AA9B)),
                           boxShadow: const [
@@ -74,16 +78,16 @@ class PianoAnswerKeyboard extends StatelessWidget {
                           ],
                         ),
                         alignment: Alignment.bottomCenter,
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 14),
                         child: showLabels
                             ? FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   nomeNota(midi, tipoNota),
                                   style: const TextStyle(
-                                    color: Color(0xFF322A28),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF231C1A),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               )
@@ -100,18 +104,22 @@ class PianoAnswerKeyboard extends StatelessWidget {
                       (_whiteMidisBefore(midi) + 1) * whiteWidth -
                       blackWidth / 2,
                   width: blackWidth,
-                  height: 88,
+                  height: 120,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: enabled ? () => onNotePressed(midi) : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       decoration: BoxDecoration(
-                        color: selectedMidi.contains(midi)
-                            ? AppColors.primary
-                            : const Color(0xFF30272C),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: selectedMidi.contains(midi)
+                              ? const [Color(0xFFF2C574), AppColors.primary]
+                              : const [Color(0xFF0F0C0D), Color(0xFF3A3135)],
+                        ),
                         borderRadius: const BorderRadius.vertical(
-                          bottom: Radius.circular(7),
+                          bottom: Radius.circular(8),
                         ),
                         border: Border.all(color: const Color(0xFF120F11)),
                         boxShadow: const [

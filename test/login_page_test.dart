@@ -26,7 +26,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('ENTRAR'), findsOneWidget);
+    expect(find.text('Entrar'), findsOneWidget);
     expect(find.text('Esqueci minha senha'), findsOneWidget);
   });
 

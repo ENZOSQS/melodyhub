@@ -9,7 +9,9 @@ import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/guitar_sample_map.dart';
 import '../utils/note_names.dart';
+import '../utils/orientacao.dart';
 import '../widgets/guitar_fretboard.dart';
+import '../widgets/mh_ui.dart';
 
 class GuitarNoteExerciseScreen extends StatefulWidget {
   const GuitarNoteExerciseScreen({super.key});
@@ -41,12 +43,14 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
   @override
   void initState() {
     super.initState();
+    usarPaisagem();
     _inicializar();
   }
 
   @override
   void dispose() {
     _cronometro.stop();
+    voltarRetrato();
     super.dispose();
   }
 
@@ -182,144 +186,166 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background,
-    appBar: AppBar(
+  Widget build(BuildContext context) {
+    final alvo = _alvo;
+    final respondido = _acertou != null;
+    final podeConfirmar =
+        _selecionada != null && !respondido && !_salvando && !_tocando;
+    return Scaffold(
       backgroundColor: AppColors.background,
-      foregroundColor: AppColors.text,
-      title: const Text('Encontre a nota no violão'),
-    ),
-    body: _carregando
-        ? const Center(child: CircularProgressIndicator())
-        : SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
+      body: SafeArea(
+        child: _carregando
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+                    child: Row(
                       children: [
-                        const Text(
-                          'Ouça a nota, toque no braço para comparar os sons e confirme uma posição com a mesma nota. Qualquer oitava vale.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.text, height: 1.4),
+                        IconButton(
+                          tooltip: 'Voltar',
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: AppColors.text,
+                            size: 28,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 8,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _tocando || _salvando
-                                  ? null
-                                  : _repetirNota,
-                              icon: const Icon(Icons.replay),
-                              label: const Text('Ouvir novamente'),
-                            ),
-                            FilledButton.icon(
-                              onPressed:
-                                  _selecionada != null &&
-                                      _acertou == null &&
-                                      !_salvando &&
-                                      !_tocando
-                                  ? _confirmar
-                                  : null,
-                              icon: const Icon(Icons.check),
-                              label: const Text('Confirmar'),
-                            ),
-                            TextButton.icon(
-                              onPressed: () => setState(
-                                () => _mostrarNomes = !_mostrarNomes,
+                        const Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                'Encontre a nota no violão',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.text,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
-                              icon: Icon(
-                                _mostrarNomes
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
+                              SizedBox(height: 2),
+                              Text(
+                                'Toque para ouvir e confirme a posição.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.muted,
+                                  fontSize: 15,
+                                ),
                               ),
-                              label: Text(
-                                _mostrarNomes
-                                    ? 'Ocultar nomes'
-                                    : 'Mostrar nomes',
-                              ),
-                            ),
-                            TextButton.icon(
-                              onPressed: _acertou == null
-                                  ? () => setState(
-                                      () => _mostrarDica = !_mostrarDica,
-                                    )
-                                  : null,
-                              icon: const Icon(Icons.lightbulb_outline),
-                              label: Text(
-                                _mostrarDica ? 'Ocultar dica' : 'Dica',
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        if (_mostrarDica && _alvo != null)
-                          Text(
-                            'Uma posição possível: corda ${_cordas[_alvo!.$1]}, casa ${_alvo!.$2}.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.primary),
+                        IconButton(
+                          tooltip: _mostrarNomes
+                              ? 'Ocultar nomes das notas'
+                              : 'Mostrar nomes das notas',
+                          onPressed: () =>
+                              setState(() => _mostrarNomes = !_mostrarNomes),
+                          icon: Icon(
+                            _mostrarNomes
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: AppColors.muted,
                           ),
-                        if (_acertou != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _acertou!
-                                ? 'Correto! Essa posição produz ${nomeNota(_alvo!.$3, _tipoNota)}${_selecionada != null && _selecionada!.$3 != _alvo!.$3 ? ', em outra oitava' : ''}.'
-                                : 'A nota era ${nomeNota(_alvo!.$3, _tipoNota)}. Compare a altura e procure a mesma nota em outra corda ou casa.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: _acertou!
-                                  ? Colors.greenAccent
-                                  : Colors.orangeAccent,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (!_acertou!)
-                            Text(
-                              'Exemplo: corda ${_cordas[_alvo!.$1]}, casa ${_alvo!.$2}.',
-                              style: const TextStyle(color: AppColors.muted),
-                            ),
-                          TextButton.icon(
-                            onPressed: _novaQuestao,
-                            icon: const Icon(Icons.arrow_forward),
-                            label: const Text('Próxima nota'),
-                          ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    'CASAS 0–12 · TOQUE PARA OUVIR · QUALQUER OITAVA VALE',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
+                  Expanded(
+                    child: GuitarFretboard(
+                      onPositionPressed: _selecionar,
+                      showNoteNames: _mostrarNomes,
+                      tipoNota: _tipoNota,
+                      activePosition: _posicaoSelecionada,
                     ),
                   ),
-                ),
-                Expanded(
-                  child: GuitarFretboard(
-                    onPositionPressed: _selecionar,
-                    showNoteNames: _mostrarNomes,
-                    tipoNota: _tipoNota,
-                    activePosition: _posicaoSelecionada,
+                  if (_mostrarDica && alvo != null && !respondido)
+                    Text(
+                      'Dica: corda ${_cordas[alvo.$1]}, casa ${alvo.$2}.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (respondido && alvo != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        _acertou!
+                            ? 'Correto! Essa posição produz ${nomeNota(alvo.$3, _tipoNota)}${_selecionada != null && _selecionada!.$3 != alvo.$3 ? ', em outra oitava' : ''}.'
+                            : 'A nota era ${nomeNota(alvo.$3, _tipoNota)}: por exemplo, corda ${_cordas[alvo.$1]}, casa ${alvo.$2}. Compare a altura e procure a mesma nota em outra corda.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _acertou!
+                              ? MhFeedbackCard.verde
+                              : MhFeedbackCard.coral,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 54,
+                            child: OutlinedButton.icon(
+                              onPressed: _tocando || _salvando
+                                  ? null
+                                  : _repetirNota,
+                              icon: const Icon(Icons.play_arrow_rounded, size: 28),
+                              label: const Text('Ouvir novamente'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: SizedBox(
+                            height: 54,
+                            child: respondido
+                                ? FilledButton.icon(
+                                    onPressed: _novaQuestao,
+                                    icon: const Icon(Icons.arrow_forward_rounded),
+                                    label: const Text('Próxima nota'),
+                                  )
+                                : FilledButton.icon(
+                                    onPressed: podeConfirmar ? _confirmar : null,
+                                    icon: const Icon(Icons.check_rounded, size: 26),
+                                    label: const Text('Confirmar'),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: SizedBox(
+                            height: 54,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.secondary,
+                                side: const BorderSide(
+                                  color: AppColors.secondary,
+                                  width: 1.4,
+                                ),
+                              ),
+                              onPressed: respondido
+                                  ? null
+                                  : () => setState(
+                                      () => _mostrarDica = !_mostrarDica,
+                                    ),
+                              icon: const Icon(Icons.lightbulb_outline_rounded),
+                              label: Text(_mostrarDica ? 'Ocultar dica' : 'Dica'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-  );
+                ],
+              ),
+      ),
+    );
+  }
 }

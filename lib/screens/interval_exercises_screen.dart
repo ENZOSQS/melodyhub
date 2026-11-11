@@ -6,7 +6,9 @@ import '../domain/feedback_rules.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
+import '../theme/app_theme.dart';
 import '../utils/note_names.dart';
+import '../widgets/mh_ui.dart';
 import '../widgets/piano_answer_keyboard.dart';
 
 class IntervalExercisesScreen extends StatefulWidget {
@@ -371,259 +373,230 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final respondendo = _selected == null;
     return Scaffold(
       backgroundColor: _background,
-      appBar: AppBar(
-        backgroundColor: _background,
-        foregroundColor: Colors.white,
-        title: const Text('Intervalos auditivos'),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _accent))
-          : SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 260),
-                      switchInCurve: Curves.easeOutCubic,
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, 0.025),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      ),
-                      child: Container(
-                        key: ValueKey(
-                          '$_level-$_degree-$_ascending-$_firstNote',
-                        ),
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFFFFF4E5), Color(0xFFEFE0CF)],
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: _accent))
+            : ListView(
+                padding: const EdgeInsets.only(bottom: 28),
+                children: [
+                  const MelodyHeader(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Intervalos auditivos',
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -.4,
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _accent.withValues(alpha: 0.16),
-                              blurRadius: 22,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
                         ),
-                        child: Column(
-                          children: [
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 180),
-                              child: Icon(
-                                key: ValueKey(_playing),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Nível $_level · ${nomeNivelApoio(_apoioExibido)}',
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 17,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        MhSegmentedProgress(total: 10, concluidos: _attempts),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$_attempts/10 respostas · ${_levelName(_level)} · 7 acertos em 10 liberam a próxima fase',
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Center(
+                          child: SizedBox(
+                            width: 300,
+                            height: 58,
+                            child: OutlinedButton.icon(
+                              onPressed: _playing || _saving ? null : _playPair,
+                              icon: Icon(
                                 _playing
                                     ? Icons.graphic_eq_rounded
-                                    : Icons.hearing_rounded,
-                                size: 40,
-                                color: _background,
+                                    : Icons.play_arrow_rounded,
+                                size: 30,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Nível $_level · ${_levelName(_level)} · ${nomeNivelApoio(_apoioExibido)}',
-                              style: const TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold,
-                                color: _background,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _levelInstruction,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.black54),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _level == 1
-                                  ? '${nomeNota(48, _tipoNota)} → ${nomeNota(50, _tipoNota)} = 2 semitons · ${nomeNota(48, _tipoNota)} → ${nomeNota(52, _tipoNota)} = 4 semitons'
-                                  : 'Cada tecla vizinha no piano representa um semitom.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '$_attempts/10 respostas neste nível',
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            const Text(
-                              '7 acertos em 10 liberam a próxima fase.',
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: _playing || _saving ? null : _playPair,
-                              icon: const Icon(Icons.volume_up),
                               label: Text(
                                 _playing ? 'Reproduzindo…' : 'Ouvir novamente',
+                                style: const TextStyle(fontSize: 19),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            ActionChip(
-                              avatar: Icon(
-                                _slowAudio
-                                    ? Icons.slow_motion_video
-                                    : Icons.speed,
-                                size: 18,
+                          ),
+                        ),
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: _playing || _saving
+                                ? null
+                                : () => setState(
+                                    () => _slowAudio = !_slowAudio,
+                                  ),
+                            icon: Icon(
+                              _slowAudio
+                                  ? Icons.slow_motion_video
+                                  : Icons.speed,
+                              size: 18,
+                            ),
+                            label: Text(
+                              _slowAudio
+                                  ? 'Escuta guiada lenta'
+                                  : 'Escuta normal',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (respondendo) ...[
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 260),
+                            child: MhCard(
+                              key: ValueKey(
+                                '$_level-$_degree-$_ascending-$_firstNote',
                               ),
-                              label: Text(
-                                _slowAudio
-                                    ? 'Escuta guiada lenta'
-                                    : 'Escuta normal',
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.headphones_rounded,
+                                    color: AppColors.secondary,
+                                    size: 40,
+                                  ),
+                                  const MhDividerVertical(altura: 52),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _apoioAtual == NivelApoio.avancado
+                                              ? 'Nota inicial: ${_noteName(_midiOf(_firstNote))}. Toque a nota de chegada.'
+                                              : 'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
+                                          style: const TextStyle(
+                                            color: AppColors.text,
+                                            fontSize: 17,
+                                            height: 1.35,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          _level == 1
+                                              ? '${nomeNota(48, _tipoNota)} → ${nomeNota(50, _tipoNota)} = 2 semitons · ${nomeNota(48, _tipoNota)} → ${nomeNota(52, _tipoNota)} = 4 semitons'
+                                              : _levelInstruction,
+                                          style: const TextStyle(
+                                            color: AppColors.muted,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          MhCard(
+                            padding: const EdgeInsets.all(8),
+                            child: PianoAnswerKeyboard(
+                              enabled: !_playing && !_saving,
+                              selectedMidi: const <int>{},
+                              tipoNota: _tipoNota,
+                              onNotePressed: _playKeyboardAnswer,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Center(
+                            child: TextButton.icon(
                               onPressed: _playing || _saving
                                   ? null
-                                  : () => setState(
-                                      () => _slowAudio = !_slowAudio,
-                                    ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween<double>(begin: 0, end: _attempts / 10),
-                        duration: const Duration(milliseconds: 420),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, value, _) => LinearProgressIndicator(
-                          value: value,
-                          minHeight: 7,
-                          backgroundColor: Colors.white12,
-                          color: _accent,
-                        ),
-                      ),
-                    ),
-                    if (_selected == null) ...[
-                      OutlinedButton.icon(
-                        onPressed: _playing || _saving
-                            ? null
-                            : () => setState(() => _showHint = !_showHint),
-                        icon: const Icon(Icons.lightbulb_outline),
-                        label: Text(
-                          _showHint ? 'Ocultar dica' : 'Preciso de uma dica',
-                        ),
-                      ),
-                      if (_showHint)
-                        _learningCard(_intervalHint, Icons.lightbulb),
-                    ],
-                    const SizedBox(height: 18),
-                    if (_selected == null) ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          // A nota inicial aparece em todos os níveis: sem ela,
-                          // achar a nota de chegada exigiria ouvido absoluto.
-                          _apoioAtual == NivelApoio.avancado
-                              ? 'Nota inicial: ${_noteName(_midiOf(_firstNote))}. Toque a nota de chegada.'
-                              : 'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      PianoAnswerKeyboard(
-                        enabled: !_playing && !_saving,
-                        selectedMidi: const <int>{},
-                        tipoNota: _tipoNota,
-                        onNotePressed: _playKeyboardAnswer,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_correct != null) ...[
-                      Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Text(
-                          _correct!
-                              ? 'Isso! Intervalo reconhecido. +10 XP'
-                              : 'A resposta correta é ${_intervalNames[_degree]}. Vamos entender por quê.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: _correct!
-                                ? Colors.greenAccent
-                                : Colors.orangeAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _saving || _playing
-                            ? null
-                            : () => setState(
-                                () => _showExplanation = !_showExplanation,
+                                  : () => setState(() => _showHint = !_showHint),
+                              icon: const Icon(Icons.lightbulb_outline),
+                              label: Text(
+                                _showHint
+                                    ? 'Ocultar dica'
+                                    : 'Preciso de uma dica',
                               ),
-                        icon: const Icon(Icons.school_outlined),
-                        label: Text(
-                          _showExplanation
-                              ? 'Ocultar explicação'
-                              : 'Ver explicação',
-                        ),
-                      ),
-                      if (_showExplanation)
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          child: _learningCard(
-                            _intervalExplanation,
-                            Icons.hearing,
-                          ),
-                        ),
-                      if (_nextLevel > _level)
-                        const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text(
-                            'Fase concluída! A próxima etapa foi desbloqueada.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: _accent,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                      if (_saving)
-                        const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(color: _accent),
-                        )
-                      else
-                        FilledButton.icon(
-                          onPressed: _nextQuestion,
-                          icon: const Icon(Icons.arrow_forward),
-                          label: const Text('Próximo intervalo'),
-                        ),
-                    ],
-                  ],
-                ),
+                          if (_showHint)
+                            _learningCard(_intervalHint, Icons.lightbulb),
+                        ],
+                        if (_correct != null) ...[
+                          const SizedBox(height: 6),
+                          MhFeedbackCard(
+                            acertou: _correct!,
+                            titulo: _correct!
+                                ? 'Isso! Intervalo reconhecido.'
+                                : 'A resposta correta é ${_intervalNames[_degree]}.',
+                            detalhe: _correct!
+                                ? '+10 XP'
+                                : 'Vamos entender por quê.',
+                          ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: TextButton.icon(
+                              onPressed: _saving || _playing
+                                  ? null
+                                  : () => setState(
+                                      () => _showExplanation = !_showExplanation,
+                                    ),
+                              icon: const Icon(Icons.school_outlined),
+                              label: Text(
+                                _showExplanation
+                                    ? 'Ocultar explicação'
+                                    : 'Ver explicação',
+                              ),
+                            ),
+                          ),
+                          if (_showExplanation)
+                            _learningCard(_intervalExplanation, Icons.hearing),
+                          if (_nextLevel > _level)
+                            const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Text(
+                                'Fase concluída! A próxima etapa foi desbloqueada.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: _accent,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          if (_saving)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(
+                                  color: _accent,
+                                ),
+                              ),
+                            )
+                          else
+                            SizedBox(
+                              height: 54,
+                              child: FilledButton.icon(
+                                onPressed: _nextQuestion,
+                                icon: const Icon(Icons.arrow_forward_rounded),
+                                label: const Text('Próximo intervalo'),
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ),
+      ),
     );
   }
 
@@ -635,26 +608,24 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     'Especialista',
   ][level - 1];
 
-  Widget _learningCard(String text, IconData icon) => Container(
-    width: double.infinity,
-    margin: const EdgeInsets.symmetric(vertical: 6),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: _background),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(color: _background, height: 1.35),
+  Widget _learningCard(String text, IconData icon) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: MhCard(
+      destaque: true,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: AppColors.text, height: 1.4),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 
