@@ -539,8 +539,10 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
+                          // A nota inicial aparece em todos os níveis: sem ela,
+                          // achar a nota de chegada exigiria ouvido absoluto.
                           _apoioAtual == NivelApoio.avancado
-                              ? 'Ouça as duas notas e toque no piano a nota de chegada.'
+                              ? 'Nota inicial: ${_noteName(_midiOf(_firstNote))}. Toque a nota de chegada.'
                               : 'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
                           style: const TextStyle(
                             color: Colors.white,
