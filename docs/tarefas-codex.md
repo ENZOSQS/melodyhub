@@ -394,3 +394,9 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 - Decisões: progressão gradual de notas e intervalos; repetição da mesma questão até acertar ou revelar; feedback por distância, tentativas, estrelas e combo; conteúdo explicativo com reprodução de exemplo em prática auditiva, teoria, escalas/acordes e ritmo. Campos `tentativas` e `estrelas` são opcionais no histórico. Mensagens de falha de áudio orientam a conferir volume e repetir.
 - Pendências: validar a experiência auditiva em dispositivo físico e confirmar que a latência varia adequadamente entre aparelhos.
 - analyze/test: `flutter analyze` sem problemas; `flutter test` passou (51 testes).
+
+### Registro 13E — Validação e entrega final
+- Arquivos: `docs/testes/lista-testes.md` atualizado para 51 casos; APK copiado para `E:\TCC\entrega\MelodyHub.apk` (82.011.006 bytes; fora do Git). Nenhum código-fonte adicional alterado.
+- Decisões: mantida a licença CC BY 3.0 dos samples com atribuição em `docs/creditos-sons.md`; não houve publicação nem alteração das regras do Firestore. O APK foi compilado em release.
+- Pendências: capturas em aparelho/emulador não foram feitas porque só há dispositivos Windows/Chrome/Edge conectados e nenhum emulador Android disponível. A validação manual do áudio e das telas móveis continua pendente.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (51 testes).

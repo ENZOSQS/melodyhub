@@ -1,6 +1,6 @@
 # Testes automatizados – Melody Hub
 
-Total: 43 testes (`flutter test`). Última execução registrada: 12/11/2026 – todos aprovados, `flutter analyze` sem problemas.
+Total: 51 testes (`flutter test`). Última execução: 12/11/2026 – todos aprovados; `flutter analyze` sem problemas.
 
 | Arquivo | O que verifica | Casos |
 |---|---|---|
@@ -13,10 +13,13 @@ Total: 43 testes (`flutter test`). Última execução registrada: 12/11/2026 –
 | `test/continue_rules_test.dart` | Sugestão "Continue de onde parou" (RF012) | 5 |
 | `test/reminder_days_test.dart` | Dias dos lembretes de estudo (RF011) | 2 |
 | `test/note_names_test.dart` | Nomenclatura das notas (RF010) | 1 |
-| `test/sound_assets_test.dart` | Arquivos de áudio empacotados (RF002, RF006) | 2 |
-| `test/guitar_fretboard_test.dart` | Braço do violão (widget, RF006) | 1 |
+| `test/sound_assets_test.dart` | Arquivos de áudio empacotados e mapeamento de samples (RF002, RF006) | 4 |
+| `test/guitar_fretboard_test.dart` | Altura do braço e posição tocada (widget, RF006) | 2 |
 | `test/exercise_catalog_test.dart` | Catálogo de exercícios (widget, RF005) | 1 |
+| `test/keyboard_octave_selector_test.dart` | Limites, quantidade de teclas e preferência de oitavas | 1 |
 | `test/login_page_test.dart` | Tela de login (widget, RF001) | 2 |
+| `test/answer_feedback_rules_test.dart` | Distância, direção, estrelas e acerto por tentativas | 2 |
+| `test/ear_training_levels_test.dart` | Progressão de notas e intervalos auditivos | 2 |
 
 ## Casos de teste
 
@@ -87,18 +90,35 @@ Total: 43 testes (`flutter test`). Última execução registrada: 12/11/2026 –
 ### `test/sound_assets_test.dart`
 
 38. o ditado rítmico possui os três cliques de áudio empacotados
-39. há sample de violão para cada corda e casa do simulador
+39. o mapa de piano cobre toda a faixa usada e os arquivos existem
+40. há sample de violão para cada corda e casa do simulador
+41. pitchRatio representa semitons e rejeita deslocamentos maiores
 
 ### `test/guitar_fretboard_test.dart`
 
-40. toque na quinta corda, casa três, informa MIDI 48
+42. o braço ocupa a altura oferecida em paisagem 800×360
+43. toque na quinta corda, casa três, informa MIDI 48
 
 ### `test/exercise_catalog_test.dart`
 
-41. filtra por violão e mantém a escolha ao remontar
+44. filtra por violão e mantém a escolha ao remontar
+
+### `test/keyboard_octave_selector_test.dart`
+
+45. ajusta teclas brancas e respeita os limites de 1–4 oitavas
 
 ### `test/login_page_test.dart`
 
-42. mostra e-mail, senha e botão Entrar
-43. pede o e-mail quando a recuperação começa sem endereço
+46. mostra e-mail, senha e botão Entrar
+47. pede o e-mail quando a recuperação começa sem endereço
+
+### `test/answer_feedback_rules_test.dart`
+
+48. classifica distância e direção da nota
+49. estrelas e progresso contam até a segunda tentativa
+
+### `test/ear_training_levels_test.dart`
+
+50. prática de notas cresce em complexidade e tamanho
+51. intervalos começam com saltos grandes e avançam aos menores
 
