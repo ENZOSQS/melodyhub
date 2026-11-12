@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import '../services/music_audio_service.dart';
 import '../services/app_preferences.dart';
 import '../utils/note_names.dart';
+import '../utils/sample_map.dart';
 
 class KeyboardScreen extends StatefulWidget {
   const KeyboardScreen({super.key});
@@ -22,22 +22,6 @@ class KeyboardScreen extends StatefulWidget {
 class _KeyboardScreenState extends State<KeyboardScreen> {
   static const _whiteNoteOffsets = [0, 2, 4, 5, 7, 9, 11];
   static const _blackKeyBoundaries = {1, 2, 4, 5, 6};
-  static const _sampleFiles = [
-    'C3.wav',
-    'C#3.wav',
-    'D3.wav',
-    'D#3.wav',
-    'E3.wav',
-    'F3.wav',
-    'F#3.wav',
-    'G3.wav',
-    'G#3.wav',
-    'A3.wav',
-    'A#3.wav',
-    'B3.wav',
-    'C4.wav',
-    'C#4.wav',
-  ];
   static final Map<LogicalKeyboardKey, int> _keyOffsets = {
     LogicalKeyboardKey.keyZ: 0,
     LogicalKeyboardKey.keyS: 1,
@@ -107,7 +91,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   Future<void> _initializeAudio() async {
     try {
       final values = await Future.wait([
-        _audio.preload(_sampleFiles),
+        _audio.preload(SampleMap.pianoAssets),
         AppPreferences.showKeyboardLabels(),
         AppPreferences.noteType(),
       ]);
@@ -129,17 +113,6 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
       debugPrint('Falha ao carregar o teclado: $error');
     }
   }
-
-  int _sampleMidiFor(int midi) {
-    final pitchClass = midi % 12;
-    final lower = 48 + pitchClass;
-    final upper = 60 + pitchClass;
-    return upper <= 61 && (midi - upper).abs() <= (midi - lower).abs()
-        ? upper
-        : lower;
-  }
-
-  String _sampleForMidi(int midi) => _sampleFiles[_sampleMidiFor(midi) - 48];
 
   int _midiAt(Offset point, Size size, int whiteKeyCount) {
     if (point.dx < 0 || point.dx >= size.width || point.dy < 0) return -1;
@@ -192,10 +165,10 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
     });
 
     try {
-      final sampleMidi = _sampleMidiFor(midi);
+      final sample = SampleMap.piano(midi);
       final handle = await _audio.startPianoNote(
-        _sampleForMidi(midi),
-        pitchRatio: math.pow(2, (midi - sampleMidi) / 12).toDouble(),
+        sample.file,
+        pitchRatio: sample.pitchRatio,
       );
       if (_activeNotes[pointer] == midi) {
         _activeHandles[pointer] = handle;
@@ -304,11 +277,10 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
           final wait = note.start - clock.elapsed;
           if (wait > Duration.zero) await Future<void>.delayed(wait);
           if (!mounted || token != _playbackToken) return;
+          final sample = SampleMap.piano(note.midi);
           final handle = await _audio.startPianoNote(
-            _sampleForMidi(note.midi),
-            pitchRatio: math
-                .pow(2, (note.midi - _sampleMidiFor(note.midi)) / 12)
-                .toDouble(),
+            sample.file,
+            pitchRatio: sample.pitchRatio,
           );
           try {
             if (note.duration > Duration.zero) {

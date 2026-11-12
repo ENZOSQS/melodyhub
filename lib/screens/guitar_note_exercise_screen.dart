@@ -99,9 +99,11 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
     _cronometro.stop();
     setState(() => _tocando = true);
     try {
+      final sample = GuitarSampleMap.forPosition(alvo.$1, alvo.$2);
       await _audio.playFor(
-        GuitarSampleMap.forPosition(alvo.$1, alvo.$2),
+        sample.file,
         const Duration(milliseconds: 1600),
+        pitchRatio: sample.pitchRatio,
       );
     } catch (_) {
       if (mounted) {
@@ -127,9 +129,11 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
       _posicaoSelecionada = (corda, casa);
     });
     try {
+      final sample = GuitarSampleMap.forPosition(corda, casa);
       await _audio.playFor(
-        GuitarSampleMap.forPosition(corda, casa),
+        sample.file,
         const Duration(milliseconds: 900),
+        pitchRatio: sample.pitchRatio,
       );
     } catch (_) {
       // A seleção continua válida mesmo se o som falhar.
@@ -296,7 +300,10 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                               onPressed: _tocando || _salvando
                                   ? null
                                   : _repetirNota,
-                              icon: const Icon(Icons.play_arrow_rounded, size: 28),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 28,
+                              ),
                               label: const Text('Ouvir novamente'),
                             ),
                           ),
@@ -308,12 +315,19 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                             child: respondido
                                 ? FilledButton.icon(
                                     onPressed: _novaQuestao,
-                                    icon: const Icon(Icons.arrow_forward_rounded),
+                                    icon: const Icon(
+                                      Icons.arrow_forward_rounded,
+                                    ),
                                     label: const Text('Próxima nota'),
                                   )
                                 : FilledButton.icon(
-                                    onPressed: podeConfirmar ? _confirmar : null,
-                                    icon: const Icon(Icons.check_rounded, size: 26),
+                                    onPressed: podeConfirmar
+                                        ? _confirmar
+                                        : null,
+                                    icon: const Icon(
+                                      Icons.check_rounded,
+                                      size: 26,
+                                    ),
                                     label: const Text('Confirmar'),
                                   ),
                           ),
@@ -336,7 +350,9 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                                       () => _mostrarDica = !_mostrarDica,
                                     ),
                               icon: const Icon(Icons.lightbulb_outline_rounded),
-                              label: Text(_mostrarDica ? 'Ocultar dica' : 'Dica'),
+                              label: Text(
+                                _mostrarDica ? 'Ocultar dica' : 'Dica',
+                              ),
                             ),
                           ),
                         ),

@@ -68,9 +68,11 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
       _lastPosition = (string, fret);
     });
     try {
+      final sample = GuitarSampleMap.forPosition(string, fret);
       await _audio.playFor(
-        GuitarSampleMap.forPosition(string, fret),
+        sample.file,
         const Duration(milliseconds: 1900),
+        pitchRatio: sample.pitchRatio,
       );
     } catch (_) {
       if (mounted) {

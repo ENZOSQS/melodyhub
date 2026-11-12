@@ -1,31 +1,17 @@
-/// Maps the standard-tuned guitar fretboard to real, string-specific samples.
+import 'sample_map.dart';
+
+/// Maps the standard-tuned guitar fretboard to nearby recorded samples.
 abstract final class GuitarSampleMap {
   static const openMidiNotes = [64, 59, 55, 50, 45, 40];
-  static const _stringAssets = ['highE', 'B', 'G', 'D', 'A', 'lowE'];
-  static const _noteAssets = [
-    'C',
-    'Cs',
-    'D',
-    'Ds',
-    'E',
-    'F',
-    'Fs',
-    'G',
-    'Gs',
-    'A',
-    'As',
-    'B',
-  ];
 
-  static String forPosition(int stringIndex, int fret) {
+  static MappedSample forPosition(int stringIndex, int fret) {
     RangeError.checkValueInInterval(stringIndex, 0, 5, 'stringIndex');
     RangeError.checkValueInInterval(fret, 0, 12, 'fret');
     final midi = openMidiNotes[stringIndex] + fret;
-    return 'guitar/gtr_${_stringAssets[stringIndex]}_'
-        '${_noteAssets[midi % 12]}${midi ~/ 12 - 1}.ogg';
+    return SampleMap.guitar(midi);
   }
 
-  static Iterable<String> get fretboardAssets sync* {
+  static Iterable<MappedSample> get fretboardSamples sync* {
     for (
       var stringIndex = 0;
       stringIndex < openMidiNotes.length;
@@ -36,4 +22,7 @@ abstract final class GuitarSampleMap {
       }
     }
   }
+
+  static Iterable<String> get fretboardAssets =>
+      fretboardSamples.map((sample) => sample.file).toSet();
 }

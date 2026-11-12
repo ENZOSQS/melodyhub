@@ -7,6 +7,7 @@ import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
 import '../utils/note_names.dart';
+import '../utils/sample_map.dart';
 
 class ExercisesScreen extends StatefulWidget {
   const ExercisesScreen({super.key, this.nivelSelecionado});
@@ -25,15 +26,16 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   static const Duration _duracaoLenta = Duration(milliseconds: 620);
   static const Duration _pausaNormal = Duration(milliseconds: 55);
   static const Duration _pausaLenta = Duration(milliseconds: 150);
-  List<Map<String, String>> get _notas => [
-    {'nome': nomeNota(0, _tipoNota), 'arquivo': 'C3.wav'},
-    {'nome': nomeNota(2, _tipoNota), 'arquivo': 'D3.wav'},
-    {'nome': nomeNota(4, _tipoNota), 'arquivo': 'E3.wav'},
-    {'nome': nomeNota(5, _tipoNota), 'arquivo': 'F3.wav'},
-    {'nome': nomeNota(7, _tipoNota), 'arquivo': 'G3.wav'},
-    {'nome': nomeNota(9, _tipoNota), 'arquivo': 'A3.wav'},
-    {'nome': nomeNota(11, _tipoNota), 'arquivo': 'B3.wav'},
-  ];
+  List<Map<String, dynamic>> get _notas =>
+      [0, 2, 4, 5, 7, 9, 11].map((semitone) {
+        final midi = 48 + semitone;
+        final sample = SampleMap.piano(midi);
+        return <String, dynamic>{
+          'nome': nomeNota(semitone, _tipoNota),
+          'arquivo': sample.file,
+          'pitchRatio': sample.pitchRatio,
+        };
+      }).toList();
 
   final MusicAudioService _audio = MusicAudioService.instance;
   final ProgressService _progressService = ProgressService();
@@ -62,7 +64,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   NivelApoio? _apoioResposta;
   String? _erroInicializacao;
   String _tipoNota = 'solfejo';
-  List<Map<String, String>> _alvo = [];
+  List<Map<String, dynamic>> _alvo = [];
   List<String> _respostas = [];
 
   Duration get _duracaoNota => _audioLento ? _duracaoLenta : _duracaoNormal;
@@ -122,7 +124,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
         etapas['${widget.nivelSelecionado ?? nivelAtual}'] as Map? ??
             const <String, dynamic>{},
       );
-      await _audio.preload(_notas.map((nota) => nota['arquivo']!));
+      await _audio.preload(SampleMap.pianoAssets);
       if (!mounted) return;
       setState(() {
         _tipoNota = tipoNota;
@@ -154,8 +156,8 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     }
   }
 
-  List<Map<String, String>> _sortearSequencia() {
-    final resultado = <Map<String, String>>[];
+  List<Map<String, dynamic>> _sortearSequencia() {
+    final resultado = <Map<String, dynamic>>[];
     while (resultado.length < _tamanhoSequencia) {
       final nota = _notas[_random.nextInt(_notas.length)];
       if (resultado.isEmpty || resultado.last['nome'] != nota['nome']) {
@@ -172,7 +174,11 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     try {
       for (final nota in _alvo) {
         if (!mounted || !_emForeground) break;
-        await _audio.playFor(nota['arquivo']!, _duracaoNota);
+        await _audio.playFor(
+          nota['arquivo'] as String,
+          _duracaoNota,
+          pitchRatio: nota['pitchRatio'] as double,
+        );
         await Future<void>.delayed(_pausaEntreNotas);
       }
     } catch (erro) {
@@ -238,18 +244,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
         questaoId: 'sequencia_notas_nivel_$_nivel',
         categoria: 'Memória auditiva',
         itemAvaliado: _tamanhoSequencia == 1
-            ? nomeNota(
-                const {
-                  'C3.wav': 0,
-                  'D3.wav': 2,
-                  'E3.wav': 4,
-                  'F3.wav': 5,
-                  'G3.wav': 7,
-                  'A3.wav': 9,
-                  'B3.wav': 11,
-                }[_alvo.first['arquivo']]!,
-                'solfejo',
-              )
+            ? _alvo.first['nome'] as String
             : null,
         duracaoSegundos: duracao,
         duracaoMilissegundos: duracaoMs,
@@ -314,7 +309,11 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     try {
       for (final nota in _alvo) {
         if (!mounted || !_emForeground) break;
-        await _audio.playFor(nota['arquivo']!, _duracaoNota);
+        await _audio.playFor(
+          nota['arquivo'] as String,
+          _duracaoNota,
+          pitchRatio: nota['pitchRatio'] as double,
+        );
         await Future<void>.delayed(_pausaEntreNotas);
       }
     } catch (_) {

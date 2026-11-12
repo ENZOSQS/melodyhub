@@ -8,6 +8,7 @@ import '../services/app_preferences.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../utils/note_names.dart';
+import '../utils/sample_map.dart';
 import '../widgets/piano_answer_keyboard.dart';
 
 enum ConceptExercise { scale, chord }
@@ -21,20 +22,6 @@ class MusicConceptsScreen extends StatefulWidget {
 }
 
 class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
-  static const _notes = [
-    'C',
-    'C#',
-    'D',
-    'D#',
-    'E',
-    'F',
-    'F#',
-    'G',
-    'G#',
-    'A',
-    'A#',
-    'B',
-  ];
   static const _scaleData = <String, List<int>>{
     'Maior': [0, 2, 4, 5, 7, 9, 11, 12],
     'Menor natural': [0, 2, 3, 5, 7, 8, 10, 12],
@@ -92,14 +79,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       ? 'Reconhecer escalas'
       : 'Reconhecer acordes';
   String get _noteName => nomeNota(_root, _noteType ?? 'solfejo');
-  String _file(int semitone) {
-    final absolute = _root + semitone;
-    final index = absolute % 12;
-    return '${_notes[index]}3.wav';
-  }
-
-  double _pitchRatio(int semitone) =>
-      pow(2, (_root + semitone) ~/ 12).toDouble();
+  MappedSample _sample(int semitone) => SampleMap.piano(48 + _root + semitone);
 
   @override
   void initState() {
@@ -116,7 +96,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       final skill = Map<String, dynamic>.from(skills[_skill] as Map? ?? {});
       _level = (skill['nivel'] as num?)?.toInt().clamp(1, 5) ?? 1;
       _noteType = await AppPreferences.noteType();
-      await _audio.preload(_notes.map((n) => '${n}3.wav'));
+      await _audio.preload(SampleMap.pianoAssets);
     } catch (_) {
       _noteType = 'solfejo';
     }
@@ -142,18 +122,23 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       final intervals = _options[_answer]!;
       if (widget.exercise == ConceptExercise.scale) {
         for (final semitone in intervals) {
+          final sample = _sample(semitone);
           await _audio.playFor(
-            _file(semitone),
+            sample.file,
             const Duration(milliseconds: 280),
-            pitchRatio: _pitchRatio(semitone),
+            pitchRatio: sample.pitchRatio,
           );
           await Future<void>.delayed(const Duration(milliseconds: 55));
         }
       } else {
         final handles = await Future.wait<SoundHandle>(
-          intervals.map(
-            (i) => _audio.startPianoNote(_file(i), pitchRatio: _pitchRatio(i)),
-          ),
+          intervals.map((i) {
+            final sample = _sample(i);
+            return _audio.startPianoNote(
+              sample.file,
+              pitchRatio: sample.pitchRatio,
+            );
+          }),
         );
         await Future<void>.delayed(const Duration(milliseconds: 850));
         await Future.wait(handles.map(_audio.stopPianoNote));
@@ -226,9 +211,11 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       }
     });
     try {
+      final sample = SampleMap.piano(midi);
       await _audio.playFor(
-        '${_notes[midi % 12]}3.wav',
+        sample.file,
         const Duration(milliseconds: 520),
+        pitchRatio: sample.pitchRatio,
       );
     } catch (_) {
       if (mounted) {

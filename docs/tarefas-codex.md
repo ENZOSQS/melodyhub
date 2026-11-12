@@ -366,3 +366,13 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 - Decisões:
 - Pendências:
 - analyze/test:
+
+---
+
+## Tarefa 13 — Melhorias didáticas, samples e interface musical
+
+### Registro 13A — Biblioteca de samples
+- Arquivos: `assets/sounds/piano/`, `assets/sounds/guitar/`, `lib/utils/sample_map.dart`, `lib/utils/guitar_sample_map.dart`, telas de teclado, prática, intervalos, conceitos musicais e violão, `lib/screens/profile_screen.dart`, `pubspec.yaml`, `test/sound_assets_test.dart` e `docs/creditos-sons.md`; removidos os samples antigos substituídos. Preservados os três WAVs de metrônomo/ditado rítmico.
+- Decisões: samples de `nbrosowsky/tonejs-instruments`, áudio sob CC BY 3.0. A seleção MIDI central só aceita deslocamento de até um semitom. Atribuições e origens específicas estão em `docs/creditos-sons.md` e no Perfil.
+- Pendências: conferir auditivamente os timbres em aparelho físico; essa etapa não é automatizável aqui.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (45 testes); APK release 78,1 MB, abaixo dos 85.706.766 bytes do APK anterior.

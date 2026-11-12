@@ -8,6 +8,7 @@ import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
 import '../theme/app_theme.dart';
 import '../utils/note_names.dart';
+import '../utils/sample_map.dart';
 import '../widgets/mh_ui.dart';
 import '../widgets/piano_answer_keyboard.dart';
 
@@ -29,21 +30,10 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   static const Duration _duracaoLenta = Duration(milliseconds: 620);
   static const Duration _pausaNormal = Duration(milliseconds: 55);
   static const Duration _pausaLenta = Duration(milliseconds: 150);
-  static const _notes = [
-    (0, 'C3.wav'),
-    (1, 'C#3.wav'),
-    (2, 'D3.wav'),
-    (3, 'D#3.wav'),
-    (4, 'E3.wav'),
-    (5, 'F3.wav'),
-    (6, 'F#3.wav'),
-    (7, 'G3.wav'),
-    (8, 'G#3.wav'),
-    (9, 'A3.wav'),
-    (10, 'A#3.wav'),
-    (11, 'B3.wav'),
-    (12, 'C4.wav'),
-  ];
+  static final _notes = List.generate(
+    13,
+    (index) => (index, SampleMap.piano(48 + index)),
+  );
   static const _intervalNames = [
     '',
     'Segunda menor',
@@ -91,8 +81,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   NivelApoio? _apoioResposta;
   late int _degree;
   late bool _ascending;
-  late (int, String) _firstNote;
-  late (int, String) _secondNote;
+  late (int, MappedSample) _firstNote;
+  late (int, MappedSample) _secondNote;
   String _tipoNota = 'solfejo';
 
   Duration get _noteDuration => _slowAudio ? _duracaoLenta : _duracaoNormal;
@@ -156,7 +146,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       final stage = Map<String, dynamic>.from(
         stages['$level'] as Map? ?? const <String, dynamic>{},
       );
-      await _audio.preload(_notes.map((note) => note.$2));
+      await _audio.preload(_notes.map((note) => note.$2.file));
       if (!mounted) return;
       setState(() {
         _tipoNota = tipoNota;
@@ -200,7 +190,11 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     try {
       for (final note in [_firstNote, _secondNote]) {
         if (!_inForeground) return;
-        await _audio.playFor(note.$2, _noteDuration);
+        await _audio.playFor(
+          note.$2.file,
+          _noteDuration,
+          pitchRatio: note.$2.pitchRatio,
+        );
         await Future<void>.delayed(_noteGap);
       }
     } catch (_) {
@@ -217,7 +211,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     }
   }
 
-  int _midiOf((int, String) note) => 48 + note.$1;
+  int _midiOf((int, MappedSample) note) => 48 + note.$1;
 
   String _noteName(int midi) => nomeNota(midi, _tipoNota);
 
@@ -226,9 +220,11 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     _timer.stop();
     setState(() => _playing = true);
     try {
+      final sample = SampleMap.piano(midi);
       await _audio.playFor(
-        _notes[midi - 48].$2,
+        sample.file,
         const Duration(milliseconds: 620),
+        pitchRatio: sample.pitchRatio,
       );
     } catch (_) {
       if (mounted) {
@@ -337,9 +333,19 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     if (!_inForeground) return;
     setState(() => _playing = true);
     try {
-      await _audio.playFor(_firstNote.$2, _noteDuration);
+      final initial = SampleMap.piano(_midiOf(_firstNote));
+      final target = SampleMap.piano(_midiOf(_secondNote));
+      await _audio.playFor(
+        initial.file,
+        _noteDuration,
+        pitchRatio: initial.pitchRatio,
+      );
       await Future<void>.delayed(_noteGap);
-      await _audio.playFor(_secondNote.$2, _noteDuration);
+      await _audio.playFor(
+        target.file,
+        _noteDuration,
+        pitchRatio: target.pitchRatio,
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -439,9 +445,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                           child: TextButton.icon(
                             onPressed: _playing || _saving
                                 ? null
-                                : () => setState(
-                                    () => _slowAudio = !_slowAudio,
-                                  ),
+                                : () =>
+                                      setState(() => _slowAudio = !_slowAudio),
                             icon: Icon(
                               _slowAudio
                                   ? Icons.slow_motion_video
@@ -518,7 +523,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                             child: TextButton.icon(
                               onPressed: _playing || _saving
                                   ? null
-                                  : () => setState(() => _showHint = !_showHint),
+                                  : () =>
+                                        setState(() => _showHint = !_showHint),
                               icon: const Icon(Icons.lightbulb_outline),
                               label: Text(
                                 _showHint
@@ -547,7 +553,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                               onPressed: _saving || _playing
                                   ? null
                                   : () => setState(
-                                      () => _showExplanation = !_showExplanation,
+                                      () =>
+                                          _showExplanation = !_showExplanation,
                                     ),
                               icon: const Icon(Icons.school_outlined),
                               label: Text(

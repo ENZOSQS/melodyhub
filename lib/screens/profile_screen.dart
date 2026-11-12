@@ -396,7 +396,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   usuario.email ?? '',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: AppColors.muted),
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
@@ -427,6 +429,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildLembrete(),
                       const SizedBox(height: 16),
                       _buildPreferencias(),
+                      const SizedBox(height: 16),
+                      _buildSobreSons(),
                       const SizedBox(height: 16),
                       _buildNome(),
                       const SizedBox(height: 16),
@@ -477,6 +481,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       color: AppColors.text,
       fontSize: 21,
       fontWeight: FontWeight.w800,
+    ),
+  );
+
+  Widget _buildSobreSons() => Card(
+    color: AppColors.surface,
+    child: const ListTile(
+      leading: Icon(Icons.music_note, color: verde),
+      title: Text('Sobre os sons'),
+      subtitle: Text(
+        'Piano e violão: Tone.js Instruments (samples CC BY 3.0).',
+      ),
     ),
   );
 
