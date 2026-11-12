@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../services/music_audio_service.dart';
 import '../services/app_preferences.dart';
 import '../utils/note_names.dart';
 import '../utils/sample_map.dart';
+import '../widgets/keyboard_octave_selector.dart';
 
 class KeyboardScreen extends StatefulWidget {
   const KeyboardScreen({super.key});
@@ -62,8 +64,9 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   final Set<SoundHandle> _sustainedHandles = {};
   final List<_RecordedNote> _recordedNotes = [];
   final Stopwatch _recordClock = Stopwatch();
+  final ScrollController _pianoScrollController = ScrollController();
 
-  int _firstOctave = 3;
+  int _octaveCount = 1;
   int _playbackToken = 0;
   bool _loadingAudio = true;
   bool _recording = false;
@@ -72,6 +75,9 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   bool _showNoteNames = true;
   NoteType _noteType = NoteType.romance;
   String? _audioError;
+  bool _centerMiddleCOnOpen = true;
+
+  int get _firstOctave => 3 - ((_octaveCount - 1) ~/ 2);
 
   @override
   void initState() {
@@ -89,18 +95,22 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   }
 
   Future<void> _initializeAudio() async {
+    final defaultOctaveCount = MediaQuery.sizeOf(context).width >= 1000 ? 2 : 1;
     try {
       final values = await Future.wait([
         _audio.preload(SampleMap.pianoAssets),
         AppPreferences.showKeyboardLabels(),
         AppPreferences.noteType(),
+        AppPreferences.keyboardOctaveCount(),
       ]);
+      final savedOctaveCount = values[3] as int?;
       if (mounted) {
         setState(() {
           _showNoteNames = values[1] as bool;
           _noteType = (values[2] as String) == 'cifragem'
               ? NoteType.english
               : NoteType.romance;
+          _octaveCount = (savedOctaveCount ?? defaultOctaveCount).clamp(1, 4);
           _loadingAudio = false;
         });
       }
@@ -112,6 +122,18 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
       });
       debugPrint('Falha ao carregar o teclado: $error');
     }
+  }
+
+  void _setOctaveCount(int count) {
+    final bounded = count.clamp(1, 4);
+    if (bounded == _octaveCount) return;
+    _releaseAll();
+    _releaseSustainedNotes();
+    setState(() {
+      _octaveCount = bounded;
+      _centerMiddleCOnOpen = true;
+    });
+    unawaited(AppPreferences.setKeyboardOctaveCount(bounded));
   }
 
   int _midiAt(Offset point, Size size, int whiteKeyCount) {
@@ -315,6 +337,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   @override
   void dispose() {
     _recordClock.stop();
+    _pianoScrollController.dispose();
     unawaited(_audio.stopAll());
     if (defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS) {
@@ -332,7 +355,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   Widget build(BuildContext context) {
     final viewport = MediaQuery.sizeOf(context);
     final landscape = viewport.width > viewport.height;
-    final octaveCount = viewport.width >= 1000 ? 2 : 1;
+    final octaveCount = _octaveCount;
     final range =
         '${nomeNota(0, _noteType == NoteType.english ? 'cifragem' : 'solfejo')}$_firstOctave–'
         '${nomeNota(11, _noteType == NoteType.english ? 'cifragem' : 'solfejo')}${_firstOctave + octaveCount - 1}';
@@ -378,9 +401,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
           top: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Keep one octave on phones in landscape so the keys remain wide
-              // enough for comfortable touch; show two on larger displays.
-              final whiteKeyCount = constraints.maxWidth >= 1000 ? 14 : 7;
+              final whiteKeyCount = _octaveCount * 7;
               final compact = constraints.maxHeight < 410;
               final lastOctave = _firstOctave + (whiteKeyCount ~/ 7) - 1;
               final tipoNome = _noteType == NoteType.english
@@ -463,21 +484,9 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
     padding: EdgeInsets.fromLTRB(10, compact ? 0 : 2, 10, compact ? 1 : 5),
     child: Row(
       children: [
-        _roundControl(
-          icon: Icons.remove,
-          tooltip: 'Descer uma oitava',
-          onPressed: _firstOctave <= 1
-              ? null
-              : () => setState(() => _firstOctave--),
-          compact: compact,
-        ),
-        const SizedBox(width: 4),
-        _roundControl(
-          icon: Icons.add,
-          tooltip: 'Subir uma oitava',
-          onPressed: _firstOctave >= 5
-              ? null
-              : () => setState(() => _firstOctave++),
+        KeyboardOctaveSelector(
+          octaveCount: _octaveCount,
+          onChanged: _setOctaveCount,
           compact: compact,
         ),
         const Spacer(),
@@ -580,26 +589,50 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
       padding: const EdgeInsets.all(4),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final keySize = Size(constraints.maxWidth, constraints.maxHeight);
-          return Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: (event) =>
-                _pointerDown(event, keySize, whiteKeyCount),
-            onPointerMove: (event) =>
-                _pointerMove(event, keySize, whiteKeyCount),
-            onPointerUp: (event) => _releasePointer(event.pointer),
-            onPointerCancel: (event) => _releasePointer(event.pointer),
-            child: SizedBox.expand(
-              child: PianoPro(
-                noteCount: whiteKeyCount,
-                expand: true,
-                whiteHeight: height - 8,
-                showNames: _showNoteNames,
-                showOctave: true,
-                firstNoteIndex: 0,
-                firstOctave: _firstOctave,
-                noteType: _noteType,
-                buttonColors: activeColors,
+          final viewportWidth = constraints.maxWidth;
+          final keyWidth = viewportWidth / whiteKeyCount;
+          final contentWidth = keyWidth < 36
+              ? whiteKeyCount * 36.0
+              : viewportWidth;
+          if (_centerMiddleCOnOpen) {
+            _centerMiddleCOnOpen = false;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!_pianoScrollController.hasClients) return;
+              final centralCIndex =
+                  (_firstOctave <= 3 ? 3 - _firstOctave : 0) * 7;
+              final centralCX = centralCIndex * (contentWidth / whiteKeyCount);
+              final offset = (centralCX - viewportWidth / 2)
+                  .clamp(0.0, math.max(0.0, contentWidth - viewportWidth))
+                  .toDouble();
+              _pianoScrollController.jumpTo(offset);
+            });
+          }
+          final keySize = Size(contentWidth, constraints.maxHeight);
+          return SingleChildScrollView(
+            controller: _pianoScrollController,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: contentWidth,
+              height: constraints.maxHeight,
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (event) =>
+                    _pointerDown(event, keySize, whiteKeyCount),
+                onPointerMove: (event) =>
+                    _pointerMove(event, keySize, whiteKeyCount),
+                onPointerUp: (event) => _releasePointer(event.pointer),
+                onPointerCancel: (event) => _releasePointer(event.pointer),
+                child: PianoPro(
+                  noteCount: whiteKeyCount,
+                  expand: true,
+                  whiteHeight: height - 8,
+                  showNames: _showNoteNames,
+                  showOctave: true,
+                  firstNoteIndex: 0,
+                  firstOctave: _firstOctave,
+                  noteType: _noteType,
+                  buttonColors: activeColors,
+                ),
               ),
             ),
           );
@@ -607,23 +640,6 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
       ),
     );
   }
-
-  Widget _roundControl({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback? onPressed,
-    required bool compact,
-  }) => IconButton.filledTonal(
-    onPressed: onPressed,
-    tooltip: tooltip,
-    visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
-    style: IconButton.styleFrom(
-      backgroundColor: _panel,
-      foregroundColor: Colors.white,
-      disabledForegroundColor: Colors.white30,
-    ),
-    icon: Icon(icon, size: 19),
-  );
 
   Widget _controlChip({
     required IconData icon,

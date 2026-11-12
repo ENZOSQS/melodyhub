@@ -382,3 +382,9 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 - Decisões: o braço usa a altura disponível sem teto fixo; largura mínima rolável de 1240 dp para manter as casas mais curtas acima de 40 dp. As etiquetas usam no máximo 80% do espaçamento vertical. Instruções do simulador ficam num bottom sheet acessível pelo ícone de informação; cabeçalho e controles do exercício foram compactados.
 - Pendências: toque e rolagem precisam de validação manual em um celular real.
 - analyze/test: `flutter analyze` sem problemas; `flutter test` passou (46 testes), incluindo 800×360 e quinta corda/casa 3/MIDI 48.
+
+### Registro 13C — Extensão do teclado
+- Arquivos: `lib/screens/keyboard_screen.dart`, `lib/services/app_preferences.dart`, `lib/widgets/keyboard_octave_selector.dart` e `test/keyboard_octave_selector_test.dart`.
+- Decisões: seletor limitado a 1–4 oitavas, padrão adaptado ao comportamento anterior (1 em celular, 2 em tela larga), preferência local opcional. A expansão inclui primeiro a oitava acima e depois a abaixo; abaixo de 36 dp por tecla, usa rolagem e posiciona o Dó central na abertura.
+- Pendências: testar toque e gesto simultâneo em aparelho físico; o widget test valida quantidade acessível de teclas, limites e persistência da preferência.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (47 testes).

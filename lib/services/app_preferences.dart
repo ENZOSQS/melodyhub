@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppPreferences {
   static const _noteTypeKey = 'preferencia_nome_notas';
   static const _labelsKey = 'preferencia_rotulos_teclado';
+  static const _keyboardOctavesKey = 'preferencia_oitavas_teclado';
   static const _bpmKey = 'preferencia_bpm';
   static const _catalogInstrumentKey = 'preferencia_instrumento_catalogo';
   static const _reminderEnabledKey = 'lembrete_diario_ativo';
@@ -29,6 +30,16 @@ class AppPreferences {
   static Future<void> setShowKeyboardLabels(bool value) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(_labelsKey, value);
+  }
+
+  static Future<int?> keyboardOctaveCount() async =>
+      (await SharedPreferences.getInstance()).getInt(_keyboardOctavesKey);
+
+  static Future<void> setKeyboardOctaveCount(int value) async {
+    await (await SharedPreferences.getInstance()).setInt(
+      _keyboardOctavesKey,
+      value.clamp(1, 4),
+    );
   }
 
   static Future<int> defaultBpm() async {
