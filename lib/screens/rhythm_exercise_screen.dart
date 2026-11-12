@@ -7,6 +7,8 @@ import '../services/app_preferences.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
+import '../data/theory_explanations.dart';
+import '../widgets/theory_explanation_sheet.dart';
 
 class RhythmExerciseScreen extends StatefulWidget {
   const RhythmExerciseScreen({super.key});
@@ -151,7 +153,11 @@ class _RhythmExerciseScreenState extends State<RhythmExerciseScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível reproduzir o ritmo.')),
+          const SnackBar(
+            content: Text(
+              'Não foi possível tocar o ritmo. Confira o volume e toque em Ouvir o ritmo novamente.',
+            ),
+          ),
         );
       }
     } finally {
@@ -438,12 +444,24 @@ class _RhythmExerciseScreenState extends State<RhythmExerciseScreen>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: () => setState(() => _showHint = !_showHint),
-                      icon: const Icon(Icons.lightbulb_outline),
-                      label: Text(
-                        _showHint ? 'Ocultar dica' : 'Preciso de uma dica',
-                      ),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () =>
+                              setState(() => _showHint = !_showHint),
+                          icon: const Icon(Icons.lightbulb_outline),
+                          label: Text(
+                            _showHint ? 'Ocultar dica' : 'Preciso de uma dica',
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _openTheory,
+                          icon: const Icon(Icons.menu_book),
+                          label: const Text('Entenda a teoria'),
+                        ),
+                      ],
                     ),
                     if (_showHint) _hintCard,
                   ] else ...[
@@ -497,6 +515,20 @@ class _RhythmExerciseScreenState extends State<RhythmExerciseScreen>
   Widget get _hintCard => _learningCard(
     'Conte “1 e 2 e 3 e 4 e”. Os números marcam as batidas principais; o “e” ajuda a localizar toques no contratempo. Espere quatro pulsos de contagem e comece no primeiro tempo.',
     Icons.lightbulb_outline,
+  );
+
+  Future<void> _openTheory() => showTheoryExplanationSheet(
+    context,
+    explanation: const TheoryExplanation(
+      objective:
+          'Reconhecer como as batidas e os silêncios organizam um ritmo.',
+      theory:
+          'Conte quatro pulsos regulares: 1, 2, 3, 4. As batidas podem cair no pulso ou entre eles; o silêncio também ocupa tempo. Ouça o padrão e acompanhe os pulsos antes de repetir.',
+    ),
+    theory:
+        'Conte quatro pulsos regulares: 1, 2, 3, 4. As batidas podem cair no pulso ou entre eles; o silêncio também ocupa tempo. Ouça o padrão e acompanhe os pulsos antes de repetir.',
+    onPlayExample: _playing || _recording || _saving ? null : _listen,
+    exampleLabel: 'Ouvir este ritmo novamente',
   );
 
   Widget get _resultCard => _learningCard(

@@ -10,6 +10,8 @@ import '../services/progress_service.dart';
 import '../utils/note_names.dart';
 import '../utils/sample_map.dart';
 import '../widgets/piano_answer_keyboard.dart';
+import '../data/theory_explanations.dart';
+import '../widgets/theory_explanation_sheet.dart';
 
 enum ConceptExercise { scale, chord }
 
@@ -146,7 +148,11 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Falha ao reproduzir o áudio.')),
+          const SnackBar(
+            content: Text(
+              'Não foi possível tocar o som. Confira o volume e toque em Ouvir novamente.',
+            ),
+          ),
         );
       }
     } finally {
@@ -220,7 +226,11 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível tocar essa nota.')),
+          const SnackBar(
+            content: Text(
+              'Não foi possível tocar o som. Confira o volume e tente novamente.',
+            ),
+          ),
         );
       }
     }
@@ -246,6 +256,19 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
     }
     return 'O acorde $_answer é formado pelos intervalos $label a partir da fundamental $_noteName. Compare a terça: 4 semitons tende à sonoridade maior; 3 semitons, menor. O diminuto reduz também a quinta.';
   }
+
+  Future<void> _openTheory() => showTheoryExplanationSheet(
+    context,
+    explanation: TheoryExplanation(
+      objective: theoryObjectiveForCategory(
+        widget.exercise == ConceptExercise.scale ? 'Escalas' : 'Acordes',
+      ),
+      theory: _explanation(),
+    ),
+    theory: _explanation(),
+    onPlayExample: _playing ? null : () => _playQuestion(newQuestion: false),
+    exampleLabel: 'Ouvir este exemplo novamente',
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -358,12 +381,25 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
                     ),
                   ),
                 ),
-              OutlinedButton.icon(
-                onPressed: _playing
-                    ? null
-                    : () => setState(() => _showHint = !_showHint),
-                icon: const Icon(Icons.lightbulb_outline),
-                label: Text(_showHint ? 'Ocultar dica' : 'Preciso de uma dica'),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _playing
+                        ? null
+                        : () => setState(() => _showHint = !_showHint),
+                    icon: const Icon(Icons.lightbulb_outline),
+                    label: Text(
+                      _showHint ? 'Ocultar dica' : 'Preciso de uma dica',
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _openTheory,
+                    icon: const Icon(Icons.menu_book),
+                    label: const Text('Entenda a teoria'),
+                  ),
+                ],
               ),
               if (_showHint)
                 Card(

@@ -3,6 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../domain/feedback_rules.dart';
+import '../domain/answer_feedback_rules.dart';
+import '../domain/ear_training_levels.dart';
+import '../data/theory_explanations.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
@@ -11,6 +14,7 @@ import '../utils/note_names.dart';
 import '../utils/sample_map.dart';
 import '../widgets/mh_ui.dart';
 import '../widgets/piano_answer_keyboard.dart';
+import '../widgets/theory_explanation_sheet.dart';
 
 class IntervalExercisesScreen extends StatefulWidget {
   const IntervalExercisesScreen({super.key, this.nivelSelecionado});
@@ -49,13 +53,6 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     'Sétima maior',
     'Oitava justa',
   ];
-  static const _intervalsByLevel = [
-    [2, 4],
-    [2, 3, 4, 5],
-    [2, 3, 4, 5, 7],
-    [2, 3, 4, 5, 7, 8, 9, 10],
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-  ];
 
   final _audio = MusicAudioService.instance;
   final _progress = ProgressService();
@@ -77,7 +74,13 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   int _nextLevel = 1;
   int _nextAttempts = 0;
   int _sequenciaAcertosSessao = 0;
-  int? _ultimaNotaTocada;
+  int _tentativasQuestao = 0;
+  int _comboPrimeiraTentativa = 0;
+  int _estrelasRodada = 0;
+  int _questoesRodada = 0;
+  int? _ultimoPalpiteMidi;
+  bool _respostaRevelada = false;
+  final Map<int, AnswerDistance> _tentativasColoridas = {};
   NivelApoio? _apoioResposta;
   late int _degree;
   late bool _ascending;
@@ -95,16 +98,25 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       _selected != null ? _apoioResposta ?? _apoioAtual : _apoioAtual;
 
   String get _levelInstruction => const [
-    'Compare dois saltos ascendentes: uma segunda maior e uma terça maior.',
-    'Diferencie segundas e terças menores e maiores e a quarta justa. O sentido pode mudar.',
-    'Inclua a quinta justa e compare saltos próximos, ascendentes ou descendentes.',
-    'Amplie o ouvido para sextas e sétimas sem depender da direção do som.',
-    'Reconheça os doze intervalos cromáticos em qualquer direção.',
+    'Escolha se a segunda nota ficou mais aguda ou mais grave. O tamanho do salto varia.',
+    'Ouça saltos ascendentes de 2, 7 ou 12 semitons: 2ª maior, 5ª justa ou 8ª justa.',
+    'Ouça saltos ascendentes de 2, 4, 5, 7 ou 12 semitons.',
+    'Reconheça intervalos ascendentes de 1 a 12 semitons.',
+    'Reconheça intervalos de 1 a 12 semitons, subindo ou descendo.',
   ][_level - 1];
 
   String get _intervalHint => _level == 1
-      ? 'Imagine o teclado e conte teclas vizinhas entre os sons. Cada tecla, branca ou preta, representa um semitom.'
+      ? 'Compare o contorno do som: notas agudas são finas como apito; notas graves, encorpadas como trovão.'
       : 'Cante primeiro a nota inicial e depois a seguinte. Ignore se o som subiu ou desceu; compare apenas o tamanho do salto.';
+
+  Set<int>? get _allowedAnswerMidis {
+    if (_level < 2 || _level > 3) return null;
+    final initialMidi = _midiOf(_firstNote);
+    return EarTrainingLevels.intervalSemitones(_level)
+        .map((semitone) => initialMidi + semitone)
+        .where((midi) => midi >= 48 && midi <= 60)
+        .toSet();
+  }
 
   @override
   void initState() {
@@ -173,9 +185,13 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   }
 
   void _newQuestion() {
-    final candidates = _intervalsByLevel[_level - 1];
+    final candidates = EarTrainingLevels.intervalSemitones(_level);
     _degree = candidates[_random.nextInt(candidates.length)];
-    _ascending = _level == 1 || _random.nextBool();
+    _ascending = EarTrainingLevels.intervalCanDescend(_level)
+        ? _random.nextBool()
+        : _level == 1
+        ? _random.nextBool()
+        : true;
     final firstNoteIndex = _random.nextInt(_notes.length - _degree);
     final low = _notes[firstNoteIndex];
     final high = _notes[firstNoteIndex + _degree];
@@ -200,7 +216,11 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível reproduzir os sons.')),
+          const SnackBar(
+            content: Text(
+              'Não foi possível tocar o som. Confira o volume e toque em Ouvir novamente.',
+            ),
+          ),
         );
       }
     } finally {
@@ -216,7 +236,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   String _noteName(int midi) => nomeNota(midi, _tipoNota);
 
   Future<void> _playKeyboardAnswer(int midi) async {
-    if (_playing || _saving || _selected != null) return;
+    if (_playing || _saving || _selected != null || _level == 1) return;
     _timer.stop();
     setState(() => _playing = true);
     try {
@@ -229,7 +249,11 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível tocar essa nota.')),
+          const SnackBar(
+            content: Text(
+              'Não foi possível tocar o som. Confira o volume e toque em Ouvir novamente.',
+            ),
+          ),
         );
       }
       return;
@@ -241,31 +265,130 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
 
   Future<void> _answer(String answer, {required int playedMidi}) async {
     if (_playing || _saving || _selected != null) return;
+    final targetMidi = _midiOf(_secondNote);
+    _tentativasQuestao++;
+    if (playedMidi != targetMidi) {
+      _comboPrimeiraTentativa = 0;
+      setState(() {
+        _ultimoPalpiteMidi = playedMidi;
+        _tentativasColoridas[playedMidi] = AnswerFeedbackRules.distance(
+          targetMidi,
+          playedMidi,
+        );
+        _showExplanation = true;
+      });
+      await _compararIntervalo(playedMidi, targetMidi);
+      if (_inForeground) _timer.start();
+      return;
+    }
+    await _registrarResultado(
+      answer: answer,
+      response: 'Nota ${_noteName(playedMidi)}',
+      solved: true,
+    );
+  }
+
+  Future<void> _chooseDirection(bool selectedAscending) async {
+    if (_playing || _saving || _selected != null) return;
+    _tentativasQuestao++;
+    if (selectedAscending != _ascending) {
+      _comboPrimeiraTentativa = 0;
+      setState(() {
+        _ultimoPalpiteMidi = null;
+        _showExplanation = true;
+      });
+      await _compararIntervalo(_midiOf(_firstNote), _midiOf(_secondNote));
+      if (_inForeground) _timer.start();
+      return;
+    }
+    await _registrarResultado(
+      answer: selectedAscending ? 'Mais aguda' : 'Mais grave',
+      response: selectedAscending ? 'Mais aguda' : 'Mais grave',
+      solved: true,
+    );
+  }
+
+  Future<void> _compararIntervalo(int firstMidi, int secondMidi) async {
+    if (!mounted) return;
+    _timer.stop();
+    setState(() => _playing = true);
+    try {
+      for (final midi in [firstMidi, secondMidi]) {
+        final sample = SampleMap.piano(midi);
+        await _audio.playFor(
+          sample.file,
+          const Duration(milliseconds: 700),
+          pitchRatio: sample.pitchRatio,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 180));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível comparar os sons. Confira o volume e toque em Ouvir novamente.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _playing = false);
+    }
+  }
+
+  Future<void> _mostrarResposta() async {
+    if (_tentativasQuestao < 3 || _selected != null || _saving) return;
+    _respostaRevelada = true;
+    await _registrarResultado(
+      answer: 'Resposta revelada',
+      response: 'Resposta revelada após $_tentativasQuestao tentativas',
+      solved: false,
+      revealed: true,
+    );
+  }
+
+  Future<void> _registrarResultado({
+    required String answer,
+    required String response,
+    required bool solved,
+    bool revealed = false,
+  }) async {
     final apoioResposta = _apoioAtual;
     final targetMidi = _midiOf(_secondNote);
-    final isCorrect = playedMidi == targetMidi;
+    final isCountedCorrect = AnswerFeedbackRules.countsAsCorrect(
+      _tentativasQuestao,
+      revealed: revealed,
+    );
+    final stars = AnswerFeedbackRules.starsForAttempt(
+      _tentativasQuestao,
+      revealed: revealed,
+    );
     final durationMs = _timer.elapsed.inMilliseconds;
     final duration = (durationMs / 1000).ceil();
     _timer.stop();
     setState(() {
       _selected = answer;
-      _correct = isCorrect;
-      _showExplanation = !isCorrect;
+      _correct = solved;
+      _showExplanation = !solved || _tentativasQuestao > 1;
       _apoioResposta = apoioResposta;
-      _ultimaNotaTocada = playedMidi;
+      _respostaRevelada = revealed;
       _saving = true;
     });
     try {
-      if (!isCorrect && apoioResposta == NivelApoio.iniciante) {
+      if (revealed && apoioResposta == NivelApoio.iniciante) {
         await _playCorrectExample();
       }
       await _progress.registrarExercicio(
-        acertou: isCorrect,
+        acertou: isCountedCorrect,
         tipo: 'Intervalo',
-        pergunta: 'Ouça o intervalo e reproduza no teclado a nota de chegada.',
-        resposta: 'Nota ${_noteName(playedMidi)}',
-        respostaCorreta:
-            '${_intervalNames[_degree]} · nota ${_noteName(_midiOf(_secondNote))}',
+        pergunta: _level == 1
+            ? 'A segunda nota é mais aguda ou mais grave?'
+            : 'Ouça o intervalo e reproduza no teclado a nota de chegada.',
+        resposta: response,
+        respostaCorreta: _level == 1
+            ? (_ascending ? 'Mais aguda' : 'Mais grave')
+            : '${_intervalNames[_degree]} · nota ${_noteName(targetMidi)}',
         dificuldade: _level,
         questaoId:
             'intervalo_${_level}_${_degree}_${_ascending ? 'asc' : 'desc'}',
@@ -273,6 +396,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
         itemAvaliado: _intervalNames[_degree],
         duracaoSegundos: duration,
         duracaoMilissegundos: durationMs,
+        tentativas: _tentativasQuestao,
+        estrelas: stars,
       );
       final data = await _progress.buscarProgresso();
       if (!mounted) return;
@@ -292,7 +417,14 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
             ? _number(data['tentativasIntervalosNivel'])
             : _number(stage['rodadaTentativas']);
         _attempts = _nextAttempts;
-        _sequenciaAcertosSessao = isCorrect ? _sequenciaAcertosSessao + 1 : 0;
+        _sequenciaAcertosSessao = isCountedCorrect
+            ? _sequenciaAcertosSessao + 1
+            : 0;
+        _comboPrimeiraTentativa = _tentativasQuestao == 1 && isCountedCorrect
+            ? _comboPrimeiraTentativa + 1
+            : 0;
+        _estrelasRodada += stars;
+        _questoesRodada++;
         _saving = false;
       });
     } catch (_) {
@@ -302,7 +434,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
           _selected = null;
           _correct = null;
           _apoioResposta = null;
-          _ultimaNotaTocada = null;
+          _ultimoPalpiteMidi = null;
           _timer
             ..reset()
             ..start();
@@ -315,16 +447,24 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   }
 
   Future<void> _nextQuestion() async {
+    final encerrouRodada = _questoesRodada >= 10;
     setState(() {
       _level = _nextLevel;
       _attempts = _nextAttempts;
       _selected = null;
       _correct = null;
+      _tentativasQuestao = 0;
+      _tentativasColoridas.clear();
+      _ultimoPalpiteMidi = null;
+      _respostaRevelada = false;
       _showHint = false;
       _showExplanation = false;
       _apoioResposta = null;
-      _ultimaNotaTocada = null;
       _newQuestion();
+      if (encerrouRodada) {
+        _questoesRodada = 0;
+        _estrelasRodada = 0;
+      }
     });
     await _playPair();
   }
@@ -351,7 +491,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Não foi possível repetir a demonstração do intervalo.',
+              'Não foi possível tocar a demonstração. Confira o volume e tente novamente.',
             ),
           ),
         );
@@ -361,20 +501,96 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     }
   }
 
+  Future<void> _playBothTogether() async {
+    if (_playing || _saving) return;
+    setState(() => _playing = true);
+    try {
+      final notes = [
+        SampleMap.piano(_midiOf(_firstNote)),
+        SampleMap.piano(_midiOf(_secondNote)),
+      ];
+      final handles = await Future.wait([
+        for (var i = 0; i < notes.length; i++)
+          _audio.startPianoNote(notes[i].file, pitchRatio: notes[i].pitchRatio),
+      ]);
+      await Future<void>.delayed(const Duration(milliseconds: 850));
+      await Future.wait(handles.map(_audio.stopPianoNote));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível tocar as notas juntas. Confira o volume e tente novamente.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _playing = false);
+    }
+  }
+
+  Future<void> _playTheoryExample() async {
+    if (_playing || _saving) return;
+    setState(() => _playing = true);
+    try {
+      for (final midi in [48, 48 + _degree]) {
+        final sample = SampleMap.piano(midi);
+        await _audio.playFor(
+          sample.file,
+          const Duration(milliseconds: 750),
+          pitchRatio: sample.pitchRatio,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível tocar o exemplo. Confira o volume e tente novamente.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _playing = false);
+    }
+  }
+
+  Future<void> _openTheory() {
+    final explanation = intervalTheory[_degree]!;
+    return showTheoryExplanationSheet(
+      context,
+      explanation: explanation,
+      theory:
+          '${explanation.theory} Este intervalo tem $_degree semitons. Em uma oitava, há doze semitons.',
+      onPlayExample: _playTheoryExample,
+      exampleLabel: 'Ouvir este intervalo a partir do Dó',
+    );
+  }
+
   String get _intervalExplanation {
     final initialMidi = _midiOf(_firstNote);
     final targetMidi = _midiOf(_secondNote);
     final apoio = _apoioResposta ?? _apoioAtual;
-    if (apoio == NivelApoio.iniciante) {
-      return 'Tudo bem errar: o intervalo correto é ${_intervalNames[_degree]}, e ouvir as duas notas novamente ajuda seu ouvido a reconhecê-lo.';
+    final base = intervalTheory[_degree]!.theory;
+    if (_level == 1) {
+      final direction = _ascending ? 'mais aguda ↑' : 'mais grave ↓';
+      return 'A segunda nota é $direction. ${_noteName(initialMidi)} soa primeiro, depois ${_noteName(targetMidi)}. $base';
     }
-    final explicacao =
-        '${_noteName(initialMidi)} → ${_noteName(targetMidi)} percorre $_degree semiton${_degree == 1 ? '' : 's'} e forma ${_intervalNames[_degree]}. O sentido é ${_ascending ? 'ascendente' : 'descendente'}, mas o tamanho do intervalo permanece o mesmo. No teclado, conte cada tecla vizinha como um semitom.';
-    if (apoio != NivelApoio.avancado || _ultimaNotaTocada == null) {
-      return explicacao;
+    if (_ultimoPalpiteMidi == null) {
+      return '$base ${_intervalNames[_degree]} tem $_degree semitons. Toque a nota inicial destacada e conte até a nota de chegada.';
     }
-    final distanciaTocada = (_ultimaNotaTocada! - initialMidi).abs();
-    return 'Você tocou ${_noteName(_ultimaNotaTocada!)}: a partir de ${_noteName(initialMidi)}, seu salto foi de $distanciaTocada semiton${distanciaTocada == 1 ? '' : 's'}. A nota correta era ${_noteName(targetMidi)}, a $_degree semiton${_degree == 1 ? '' : 's'} da nota inicial. $explicacao';
+    final distance = (_ultimoPalpiteMidi! - initialMidi).abs();
+    final delta = distance - _degree;
+    final extra = delta == 0
+        ? 'Você chegou à nota certa.'
+        : 'Seu salto teve ${delta.abs()} semitom${delta.abs() == 1 ? '' : 's'} ${delta > 0 ? 'a mais' : 'a menos'} que a resposta.';
+    final apoioText = apoio == NivelApoio.iniciante
+        ? 'Tudo bem errar: compare os dois sons e tente mais uma vez.'
+        : 'Você tocou ${_noteName(_ultimoPalpiteMidi!)} ($distance semitons a partir de ${_noteName(initialMidi)}). $extra';
+    return '$apoioText A resposta forma ${_intervalNames[_degree]}: $_degree semitons. $base';
   }
 
   @override
@@ -421,6 +637,22 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                             fontSize: 12,
                           ),
                         ),
+                        Text(
+                          '🔥 $_comboPrimeiraTentativa seguidas na primeira tentativa',
+                          style: const TextStyle(
+                            color: AppColors.secondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (_questoesRodada >= 10)
+                          _learningCard(
+                            'Rodada concluída: $_estrelasRodada de 30 estrelas. ${_estrelasRodada >= 24
+                                ? 'Excelente ouvido!'
+                                : _estrelasRodada >= 15
+                                ? 'Bom progresso: continue praticando.'
+                                : 'Cada tentativa ensina. Tente outra rodada!'}',
+                            Icons.emoji_events,
+                          ),
                         const SizedBox(height: 22),
                         Center(
                           child: SizedBox(
@@ -460,6 +692,15 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                             ),
                           ),
                         ),
+                        Center(
+                          child: OutlinedButton.icon(
+                            onPressed: _playing || _saving
+                                ? null
+                                : _playBothTogether,
+                            icon: const Icon(Icons.graphic_eq_rounded),
+                            label: const Text('Ouvir as duas notas juntas'),
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         if (respondendo) ...[
                           AnimatedSwitcher(
@@ -482,7 +723,10 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          _apoioAtual == NivelApoio.avancado
+                                          _level == 1
+                                              ? 'A segunda nota é mais aguda ou mais grave?'
+                                              : _apoioAtual ==
+                                                    NivelApoio.avancado
                                               ? 'Nota inicial: ${_noteName(_midiOf(_firstNote))}. Toque a nota de chegada.'
                                               : 'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
                                           style: const TextStyle(
@@ -494,7 +738,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                                         const SizedBox(height: 6),
                                         Text(
                                           _level == 1
-                                              ? '${nomeNota(48, _tipoNota)} → ${nomeNota(50, _tipoNota)} = 2 semitons · ${nomeNota(48, _tipoNota)} → ${nomeNota(52, _tipoNota)} = 4 semitons'
+                                              ? 'Ouça o contorno: subiu ou desceu?'
                                               : _levelInstruction,
                                           style: const TextStyle(
                                             color: AppColors.muted,
@@ -509,32 +753,117 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                             ),
                           ),
                           const SizedBox(height: 14),
-                          MhCard(
-                            padding: const EdgeInsets.all(8),
-                            child: PianoAnswerKeyboard(
-                              enabled: !_playing && !_saving,
-                              selectedMidi: const <int>{},
-                              tipoNota: _tipoNota,
-                              onNotePressed: _playKeyboardAnswer,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Center(
-                            child: TextButton.icon(
-                              onPressed: _playing || _saving
-                                  ? null
-                                  : () =>
-                                        setState(() => _showHint = !_showHint),
-                              icon: const Icon(Icons.lightbulb_outline),
-                              label: Text(
-                                _showHint
-                                    ? 'Ocultar dica'
-                                    : 'Preciso de uma dica',
+                          if (_level == 1)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 68,
+                                    child: FilledButton.icon(
+                                      onPressed: _playing || _saving
+                                          ? null
+                                          : () => _chooseDirection(true),
+                                      icon: const Icon(
+                                        Icons.arrow_upward_rounded,
+                                      ),
+                                      label: const Text('Mais aguda'),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 68,
+                                    child: FilledButton.icon(
+                                      onPressed: _playing || _saving
+                                          ? null
+                                          : () => _chooseDirection(false),
+                                      icon: const Icon(
+                                        Icons.arrow_downward_rounded,
+                                      ),
+                                      label: const Text('Mais grave'),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            MhCard(
+                              padding: const EdgeInsets.all(8),
+                              child: PianoAnswerKeyboard(
+                                enabled: !_playing && !_saving,
+                                selectedMidi: {_midiOf(_firstNote)},
+                                enabledMidis: _allowedAnswerMidis,
+                                feedbackColors: {
+                                  for (final entry
+                                      in _tentativasColoridas.entries)
+                                    entry.key:
+                                        entry.value == AnswerDistance.close
+                                        ? const Color(0xFFF0C84B)
+                                        : const Color(0xFFB9474F),
+                                  if (_correct == true ||
+                                      (_tentativasQuestao > 0 && _level > 1))
+                                    _midiOf(_secondNote): Colors.green,
+                                },
+                                tipoNota: _tipoNota,
+                                onNotePressed: _playKeyboardAnswer,
                               ),
+                            ),
+                          const SizedBox(height: 6),
+                          if (_tentativasQuestao > 0 && _selected == null) ...[
+                            Text(
+                              _level == 1
+                                  ? (_ascending
+                                        ? 'A resposta aponta para cima ↑'
+                                        : 'A resposta aponta para baixo ↓')
+                                  : _ultimoPalpiteMidi == null
+                                  ? 'Compare seu som com a nota inicial destacada.'
+                                  : 'Você tocou ${_noteName(_ultimoPalpiteMidi!)}; ouça a diferença.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppColors.muted),
+                            ),
+                            if (_showExplanation)
+                              _learningCard(
+                                _intervalExplanation,
+                                Icons.hearing,
+                              ),
+                          ],
+                          Center(
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 8,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: _playing || _saving
+                                      ? null
+                                      : () => setState(
+                                          () => _showHint = !_showHint,
+                                        ),
+                                  icon: const Icon(Icons.lightbulb_outline),
+                                  label: Text(
+                                    _showHint
+                                        ? 'Ocultar dica'
+                                        : 'Preciso de uma dica',
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _openTheory,
+                                  icon: const Icon(Icons.menu_book),
+                                  label: const Text('Entenda a teoria'),
+                                ),
+                              ],
                             ),
                           ),
                           if (_showHint)
                             _learningCard(_intervalHint, Icons.lightbulb),
+                          if (_tentativasQuestao >= 3 && _selected == null)
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: _mostrarResposta,
+                                icon: const Icon(Icons.visibility_outlined),
+                                label: const Text('Mostrar resposta'),
+                              ),
+                            ),
                         ],
                         if (_correct != null) ...[
                           const SizedBox(height: 6),
@@ -542,10 +871,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                             acertou: _correct!,
                             titulo: _correct!
                                 ? 'Isso! Intervalo reconhecido.'
-                                : 'A resposta correta é ${_intervalNames[_degree]}.',
-                            detalhe: _correct!
-                                ? '+10 XP'
-                                : 'Vamos entender por quê.',
+                                : 'Resposta revelada: ${_intervalNames[_degree]}.',
+                            detalhe:
+                                '${'★' * AnswerFeedbackRules.starsForAttempt(_tentativasQuestao, revealed: _respostaRevelada)} · $_tentativasQuestao tentativa(s)${AnswerFeedbackRules.countsAsCorrect(_tentativasQuestao, revealed: _respostaRevelada) ? ' · +10 XP' : ''}',
                           ),
                           const SizedBox(height: 8),
                           Center(
@@ -566,6 +894,11 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                           ),
                           if (_showExplanation)
                             _learningCard(_intervalExplanation, Icons.hearing),
+                          OutlinedButton.icon(
+                            onPressed: _openTheory,
+                            icon: const Icon(Icons.menu_book),
+                            label: const Text('Entenda a teoria'),
+                          ),
                           if (_nextLevel > _level)
                             const Padding(
                               padding: EdgeInsets.all(8),

@@ -388,3 +388,9 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 - Decisões: seletor limitado a 1–4 oitavas, padrão adaptado ao comportamento anterior (1 em celular, 2 em tela larga), preferência local opcional. A expansão inclui primeiro a oitava acima e depois a abaixo; abaixo de 36 dp por tecla, usa rolagem e posiciona o Dó central na abertura.
 - Pendências: testar toque e gesto simultâneo em aparelho físico; o widget test valida quantidade acessível de teclas, limites e persistência da preferência.
 - analyze/test: `flutter analyze` sem problemas; `flutter test` passou (47 testes).
+
+### Registro 13D — Prática auditiva e explicações didáticas
+- Arquivos: `lib/screens/exercises_screen.dart`, `lib/screens/interval_exercises_screen.dart`, `lib/screens/theory_exercises_screen.dart`, `lib/screens/music_concepts_screen.dart`, `lib/screens/rhythm_exercise_screen.dart`, `lib/services/progress_service.dart`, `lib/widgets/piano_answer_keyboard.dart`, `lib/widgets/theory_explanation_sheet.dart`, `lib/domain/answer_feedback_rules.dart`, `lib/domain/ear_training_levels.dart`, `lib/data/theory_explanations.dart` e testes de domínio correspondentes.
+- Decisões: progressão gradual de notas e intervalos; repetição da mesma questão até acertar ou revelar; feedback por distância, tentativas, estrelas e combo; conteúdo explicativo com reprodução de exemplo em prática auditiva, teoria, escalas/acordes e ritmo. Campos `tentativas` e `estrelas` são opcionais no histórico. Mensagens de falha de áudio orientam a conferir volume e repetir.
+- Pendências: validar a experiência auditiva em dispositivo físico e confirmar que a latência varia adequadamente entre aparelhos.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (51 testes).

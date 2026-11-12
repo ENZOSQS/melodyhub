@@ -3,7 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../data/theory_question_bank.dart';
+import '../data/theory_explanations.dart';
 import '../services/progress_service.dart';
+import '../widgets/theory_explanation_sheet.dart';
 
 class TheoryExercisesScreen extends StatefulWidget {
   const TheoryExercisesScreen({super.key, this.nivelSelecionado});
@@ -263,6 +265,15 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
     });
   }
 
+  Future<void> _abrirTeoria() => showTheoryExplanationSheet(
+    context,
+    explanation: TheoryExplanation(
+      objective: theoryObjectiveForCategory(_questao.category),
+      theory: _questao.explanation,
+    ),
+    theory: _questao.explanation,
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -517,12 +528,28 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_respostaSelecionada == null) ...[
-          OutlinedButton.icon(
-            onPressed: _respondendo
-                ? null
-                : () => setState(() => _mostrarDica = !_mostrarDica),
-            icon: const Icon(Icons.lightbulb_outline),
-            label: Text(_mostrarDica ? 'Ocultar dica' : 'Preciso de uma dica'),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _respondendo
+                      ? null
+                      : () => setState(() => _mostrarDica = !_mostrarDica),
+                  icon: const Icon(Icons.lightbulb_outline),
+                  label: Text(
+                    _mostrarDica ? 'Ocultar dica' : 'Preciso de uma dica',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _abrirTeoria,
+                  icon: const Icon(Icons.menu_book),
+                  label: const Text('Entenda a teoria'),
+                ),
+              ),
+            ],
           ),
           if (_mostrarDica) _cartaoAprendizado(_questao.hint, Icons.lightbulb),
         ],
@@ -546,6 +573,11 @@ class _TheoryExercisesScreenState extends State<TheoryExercisesScreen>
             ),
           ),
           const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _abrirTeoria,
+            icon: const Icon(Icons.menu_book),
+            label: const Text('Entenda a teoria'),
+          ),
           OutlinedButton.icon(
             onPressed: () =>
                 setState(() => _mostrarExplicacao = !_mostrarExplicacao),
