@@ -1,0 +1,45 @@
+00:00 +0: loading E:/TCC/melodyhub/test/continue_rules_test.dart
+00:00 +0: E:/TCC/melodyhub/test/continue_rules_test.dart: sem histórico não há sugestão
+00:00 +1: E:/TCC/melodyhub/test/continue_rules_test.dart: intervalo mostra a etapa do último exercício
+00:00 +2: E:/TCC/melodyhub/test/continue_rules_test.dart: etapa fica entre 1 e 5
+00:00 +3: E:/TCC/melodyhub/test/continue_rules_test.dart: atividades sem trilha não mostram etapa
+00:00 +4: E:/TCC/melodyhub/test/continue_rules_test.dart: tipo desconhecido é ignorado
+00:00 +5: E:/TCC/melodyhub/test/exercise_catalog_test.dart: filtra por violão e mantém a escolha ao remontar
+00:01 +6: E:/TCC/melodyhub/test/exercise_catalog_test.dart: filtra por violão e mantém a escolha ao remontar
+00:01 +7: E:/TCC/melodyhub/test/exercise_catalog_test.dart: filtra por violão e mantém a escolha ao remontar
+00:01 +8: E:/TCC/melodyhub/test/exercise_catalog_test.dart: filtra por violão e mantém a escolha ao remontar
+00:01 +9: E:/TCC/melodyhub/test/exercise_catalog_test.dart: filtra por violão e mantém a escolha ao remontar
+00:01 +10: E:/TCC/melodyhub/test/exercise_catalog_test.dart: filtra por violão e mantém a escolha ao remontar
+00:02 +11: E:/TCC/melodyhub/test/guitar_fretboard_test.dart: toque na quinta corda, casa três, informa MIDI 48
+00:02 +12: E:/TCC/melodyhub/test/login_page_test.dart: mostra e-mail, senha e botão Entrar
+00:03 +13: E:/TCC/melodyhub/test/login_page_test.dart: mostra e-mail, senha e botão Entrar
+00:03 +14: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +15: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +16: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +17: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +18: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +19: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +20: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +21: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +22: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +23: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +24: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:03 +25: E:/TCC/melodyhub/test/login_page_test.dart: pede o e-mail quando a recuperação começa sem endereço
+00:04 +26: E:/TCC/melodyhub/test/reminder_days_test.dart: dias do lembrete usam semana completa por padrão e persistem ordenados
+00:04 +27: E:/TCC/melodyhub/test/reminder_days_test.dart: lista inválida vazia mantém o padrão sem deixar lembrete sem dias
+00:04 +28: E:/TCC/melodyhub/test/report_rules_test.dart: agrupa por tipo e item, conta erros e tentativas, e exige dois erros
+00:04 +29: E:/TCC/melodyhub/test/report_rules_test.dart: ignora registros fora da semana e limita os itens aos cinco mais errados
+00:04 +30: E:/TCC/melodyhub/test/report_rules_test.dart: conta eventos com horário do servidor à frente do aparelho
+00:05 +31: E:/TCC/melodyhub/test/sound_assets_test.dart: o ditado rítmico possui os três cliques de áudio empacotados
+00:05 +32: E:/TCC/melodyhub/test/sound_assets_test.dart: há sample de violão para cada corda e casa do simulador
+00:06 +33: E:/TCC/melodyhub/test/study_streak_test.dart: StudyStreak.currentCount mantém a sequência no mesmo dia do último estudo
+00:06 +34: E:/TCC/melodyhub/test/study_streak_test.dart: StudyStreak.currentCount mantém a sequência enquanto o dia seguinte ainda está em curso
+00:06 +35: E:/TCC/melodyhub/test/study_streak_test.dart: StudyStreak.currentCount zera após um dia completo sem atividade
+00:06 +36: E:/TCC/melodyhub/test/study_streak_test.dart: StudyStreak.currentCount calcula ontem corretamente na virada do mês
+00:06 +37: E:/TCC/melodyhub/test/study_streak_test.dart: StudyStreak.currentCount não mostra sequência sem data ou com saldo zero
+00:06 +38: E:/TCC/melodyhub/test/theory_bank_test.dart: Banco de questões teóricas cada questão tem resposta única entre as alternativas e nível válido
+00:06 +39: E:/TCC/melodyhub/test/theory_bank_test.dart: Banco de questões teóricas todas as questões incluem dica e explicação específicas
+00:06 +40: E:/TCC/melodyhub/test/theory_bank_test.dart: Banco de questões teóricas banco cobre todos os cinco níveis e mais de um conceito
+00:07 +41: E:/TCC/melodyhub/test/xp_calculator_test.dart: Deve retornar 10 XP quando a resposta estiver correta
+00:07 +42: E:/TCC/melodyhub/test/xp_calculator_test.dart: Deve retornar 0 XP quando a resposta estiver incorreta
+00:07 +43: All tests passed!
