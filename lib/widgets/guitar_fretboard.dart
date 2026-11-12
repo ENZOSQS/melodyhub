@@ -48,8 +48,10 @@ class _GuitarFretboardState extends State<GuitarFretboard> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final boardWidth = math.max(constraints.maxWidth, 1040.0);
-      final boardHeight = math.min(constraints.maxHeight, 390.0);
+      final boardWidth = math.max(constraints.maxWidth, 1240.0);
+      final boardHeight = constraints.maxHeight.isFinite
+          ? constraints.maxHeight
+          : 360.0;
       return Center(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -411,8 +413,9 @@ class _FretboardPainter extends CustomPainter {
     for (var corda = 0; corda < 6; corda++) {
       final centro = Offset(g.left - 34, g.stringY(corda));
       final rotulo = noteNames[tuning[corda] % 12];
+      final alturaRotulo = math.min(24.0, (size.height * .62 / 5) * .8);
       final caixa = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: centro, width: 40, height: 24),
+        Rect.fromCenter(center: centro, width: 40, height: alturaRotulo),
         const Radius.circular(12),
       );
       canvas.drawRRect(caixa, Paint()..color = const Color(0xF0211C20));
@@ -427,7 +430,11 @@ class _FretboardPainter extends CustomPainter {
         canvas,
         rotulo,
         centro,
-        const TextStyle(color: AppColors.text, fontSize: 12, fontWeight: FontWeight.w700),
+        TextStyle(
+          color: AppColors.text,
+          fontSize: math.min(12.0, alturaRotulo * .46),
+          fontWeight: FontWeight.w700,
+        ),
       );
     }
   }

@@ -5,6 +5,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:melodyhub/widgets/guitar_fretboard.dart';
 
 void main() {
+  testWidgets('o braço ocupa a altura oferecida em paisagem 800×360', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 800,
+            height: 360,
+            child: GuitarFretboard(onPositionPressed: (_, _, _) {}),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final paintedBoard = find.byWidgetPredicate(
+      (widget) => widget is CustomPaint && widget.painter != null,
+    );
+    final boardHeight = tester.getSize(paintedBoard.last).height;
+    expect(boardHeight, greaterThanOrEqualTo(360 * .85));
+  });
+
   testWidgets('toque na quinta corda, casa três, informa MIDI 48', (
     tester,
   ) async {

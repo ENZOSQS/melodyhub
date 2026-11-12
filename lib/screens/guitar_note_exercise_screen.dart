@@ -203,7 +203,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
             : Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+                    padding: const EdgeInsets.fromLTRB(6, 2, 6, 0),
                     child: Row(
                       children: [
                         IconButton(
@@ -215,7 +215,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                             size: 28,
                           ),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             children: [
                               Text(
@@ -223,7 +223,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: AppColors.text,
-                                  fontSize: 26,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -233,7 +233,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: AppColors.muted,
-                                  fontSize: 15,
+                                  fontSize: 11,
                                 ),
                               ),
                             ],
@@ -264,17 +264,23 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                     ),
                   ),
                   if (_mostrarDica && alvo != null && !respondido)
-                    Text(
-                      'Dica: corda ${_cordas[alvo.$1]}, casa ${alvo.$2}.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.w600,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'Dica: corda ${_cordas[alvo.$1]}, casa ${alvo.$2}.',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.secondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   if (respondido && alvo != null)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: Text(
                         _acertou!
                             ? 'Correto! Essa posição produz ${nomeNota(alvo.$3, _tipoNota)}${_selecionada != null && _selecionada!.$3 != alvo.$3 ? ', em outra oitava' : ''}.'
@@ -284,34 +290,34 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                           color: _acertou!
                               ? MhFeedbackCard.verde
                               : MhFeedbackCard.coral,
-                          fontSize: 15,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 14),
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
                     child: Row(
                       children: [
                         Expanded(
                           child: SizedBox(
-                            height: 54,
+                            height: 42,
                             child: OutlinedButton.icon(
                               onPressed: _tocando || _salvando
                                   ? null
                                   : _repetirNota,
                               icon: const Icon(
                                 Icons.play_arrow_rounded,
-                                size: 28,
+                                size: 20,
                               ),
                               label: const Text('Ouvir novamente'),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: SizedBox(
-                            height: 54,
+                            height: 42,
                             child: respondido
                                 ? FilledButton.icon(
                                     onPressed: _novaQuestao,
@@ -326,16 +332,16 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
                                         : null,
                                     icon: const Icon(
                                       Icons.check_rounded,
-                                      size: 26,
+                                      size: 20,
                                     ),
                                     label: const Text('Confirmar'),
                                   ),
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: SizedBox(
-                            height: 54,
+                            height: 42,
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.secondary,

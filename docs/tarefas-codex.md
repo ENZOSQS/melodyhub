@@ -376,3 +376,9 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 - Decisões: samples de `nbrosowsky/tonejs-instruments`, áudio sob CC BY 3.0. A seleção MIDI central só aceita deslocamento de até um semitom. Atribuições e origens específicas estão em `docs/creditos-sons.md` e no Perfil.
 - Pendências: conferir auditivamente os timbres em aparelho físico; essa etapa não é automatizável aqui.
 - analyze/test: `flutter analyze` sem problemas; `flutter test` passou (45 testes); APK release 78,1 MB, abaixo dos 85.706.766 bytes do APK anterior.
+
+### Registro 13B — Braço em paisagem
+- Arquivos: `lib/screens/guitar_fretboard_screen.dart`, `lib/screens/guitar_note_exercise_screen.dart`, `lib/widgets/guitar_fretboard.dart` e `test/guitar_fretboard_test.dart`.
+- Decisões: o braço usa a altura disponível sem teto fixo; largura mínima rolável de 1240 dp para manter as casas mais curtas acima de 40 dp. As etiquetas usam no máximo 80% do espaçamento vertical. Instruções do simulador ficam num bottom sheet acessível pelo ícone de informação; cabeçalho e controles do exercício foram compactados.
+- Pendências: toque e rolagem precisam de validação manual em um celular real.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (46 testes), incluindo 800×360 e quinta corda/casa 3/MIDI 48.

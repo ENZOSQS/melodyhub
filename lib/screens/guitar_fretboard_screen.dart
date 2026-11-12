@@ -18,8 +18,6 @@ class GuitarFretboardScreen extends StatefulWidget {
 
 class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
   static const _tuning = GuitarSampleMap.openMidiNotes;
-  static const _strings = ['Mi aguda', 'Si', 'Sol', 'Ré', 'Lá', 'Mi grave'];
-
   final _audio = MusicAudioService.instance;
   int? _lastMidi;
   (int, int)? _lastPosition;
@@ -89,14 +87,59 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
     unawaited(_play(string, fret));
   }
 
+  Future<void> _showInstructions() => showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.surface,
+    showDragHandle: true,
+    builder: (context) => const SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(24, 8, 24, 30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Como tocar o braço',
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Toque ou arraste sobre uma corda para ouvir a nota. Deslize o braço horizontalmente para chegar às casas 9–12. Cada casa encurta a corda e aumenta a altura do som.',
+              style: TextStyle(color: AppColors.muted, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
       backgroundColor: AppColors.background,
       foregroundColor: AppColors.text,
-      title: const Text('Braço de violão'),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Braço de violão'),
+          Text(
+            'Afinação padrão · E A D G B E${_lastMidi == null ? '' : '  ·  ${nomeNota(_lastMidi!, _tipoNota)}'}',
+            style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          ),
+        ],
+      ),
       actions: [
+        IconButton(
+          tooltip: 'Como tocar',
+          onPressed: _showInstructions,
+          icon: const Icon(Icons.info_outline_rounded),
+        ),
         TextButton.icon(
           onPressed: () => setState(() => _showNoteNames = !_showNoteNames),
           icon: Icon(_showNoteNames ? Icons.visibility_off : Icons.visibility),
@@ -109,81 +152,12 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
         : SafeArea(
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF34251F), Color(0xFF211A19)],
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Toque uma corda entre os trastes ou arraste para passear pelo braço.',
-                          style: TextStyle(color: AppColors.text, height: 1.4),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          'Afinação padrão · E A D G B E${_showNoteNames ? ' · Nomes das notas ativados' : ''}',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        if (_lastMidi != null) ...[
-                          const SizedBox(height: 8),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 160),
-                            child: Text(
-                              key: ValueKey(_lastMidi),
-                              '${nomeNota(_lastMidi!, _tipoNota)} · ${_lastMidi! ~/ 12 - 1}ª oitava  ·  ${_strings[_lastPosition!.$1]} / casa ${_lastPosition!.$2}',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 5),
-                  child: Text(
-                    '6 CORDAS  ·  CASAS 0–12',
-                    style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ),
                 Expanded(
                   child: GuitarFretboard(
                     onPositionPressed: _handlePosition,
                     showNoteNames: _showNoteNames,
                     tipoNota: _tipoNota,
                     activePosition: _lastPosition,
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 7, 16, 13),
-                  child: Text(
-                    'Arraste horizontalmente para alcançar as demais casas. Cada casa reduz o comprimento vibrante da corda.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 11,
-                      height: 1.4,
-                    ),
                   ),
                 ),
               ],
