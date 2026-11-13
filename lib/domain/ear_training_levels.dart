@@ -1,21 +1,14 @@
 /// Tabelas didáticas dos exercícios auditivos, sem dependências de tela.
 abstract final class EarTrainingLevels {
   static const _naturals = <int>[0, 2, 4, 5, 7, 9, 11];
-  static const _chromatic = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-
   static List<int> practiceNotes(int level) {
     _checkLevel(level);
     return switch (level) {
-      1 => const [0, 4, 7],
-      2 => const [0, 2, 4, 5, 7],
-      3 || 4 => _naturals,
-      _ => _chromatic,
+      1 => const [0, 7],
+      2 => const [0, 4, 7],
+      3 => const [0, 2, 4, 5, 7],
+      _ => _naturals,
     };
-  }
-
-  static int practiceSequenceLength(int level) {
-    _checkLevel(level);
-    return const [1, 2, 2, 3, 3][level - 1];
   }
 
   static List<int> intervalSemitones(int level) {

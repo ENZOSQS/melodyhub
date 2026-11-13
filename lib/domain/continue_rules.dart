@@ -24,7 +24,7 @@ SugestaoContinuar? sugestaoContinuar(Map<String, dynamic>? ultimoEvento) {
   final tipo = ultimoEvento['tipo'];
   final (atividade, nome, temEtapas) = switch (tipo) {
     'Teórico' => (AtividadeContinuar.teoria, 'Teoria', true),
-    'Prático' => (AtividadeContinuar.pratica, 'Prática de notas', true),
+    'Prático' => (AtividadeContinuar.pratica, 'Identificar a nota', true),
     'Intervalo' => (AtividadeContinuar.intervalos, 'Intervalos', true),
     'Ritmo' => (AtividadeContinuar.ritmo, 'Ritmo', false),
     'Escala' => (AtividadeContinuar.escalas, 'Escalas', false),

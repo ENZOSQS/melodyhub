@@ -145,7 +145,7 @@ class _HomePageState extends State<HomePage> {
                       const MhSectionTitle('Mais opções'),
                       _opcao(
                         icone: Icons.piano_outlined,
-                        titulo: 'Prática de notas',
+                        titulo: 'Identificar a nota',
                         descricao: 'Notas e memória auditiva em etapas.',
                         destino: const LearningPathScreen(
                           track: LearningTrack.pratica,

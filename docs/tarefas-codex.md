@@ -406,3 +406,9 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 - Decisões: usado o plano B com `flutter_soloud`, afinação MIDI exata, vozes iniciadas em volume zero, ataque de 5 ms e liberação de 300 ms. O piano usa três senoidais com decaimento; o violão usa triangular e segundo harmônico senoidal com decaimento mais rápido. O ganho é limitado também em acordes de quatro notas. Não há SoundFont nem licença de áudio de terceiros; o pacote `flutter_soloud` usa MIT.
 - Pendências: nenhuma nesta parte.
 - analyze/test: `flutter analyze` sem problemas; `flutter test` passou (48 testes). APK de teste gerado depois do ajuste de timbre.
+
+### Registro 14B — Identificar a nota
+- Arquivos: `lib/screens/exercises_screen.dart` foi refeito como treino auditivo funcional; `lib/domain/note_identification_rules.dart` concentra cadência, notas por nível, resoluções e identificadores críticos. Atualizados `lib/domain/ear_training_levels.dart`, os rótulos da Início e de continuar estudando e os testes de níveis; adicionados testes das regras do exercício.
+- Decisões: cada questão toca a cadência Dó–Fá–Sol–Dó e uma nota da escala de Dó maior. Respostas erradas ficam apagadas; no terceiro erro a resposta é revelada. Acertos e revelações são gravados por questão, preservando a regra de 7/10 e as estrelas por tentativas.
+- Pendências: conferir a experiência auditiva e o toque longo no celular.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (59 testes).

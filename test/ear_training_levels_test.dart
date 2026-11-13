@@ -2,16 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:melodyhub/domain/ear_training_levels.dart';
 
 void main() {
-  test('prática de notas cresce em complexidade e tamanho', () {
-    expect(EarTrainingLevels.practiceNotes(1), [0, 4, 7]);
-    expect(EarTrainingLevels.practiceSequenceLength(1), 1);
-    expect(EarTrainingLevels.practiceNotes(2), [0, 2, 4, 5, 7]);
-    expect(EarTrainingLevels.practiceSequenceLength(2), 2);
-    expect(EarTrainingLevels.practiceNotes(3), [0, 2, 4, 5, 7, 9, 11]);
-    expect(EarTrainingLevels.practiceSequenceLength(3), 2);
-    expect(EarTrainingLevels.practiceSequenceLength(4), 3);
-    expect(EarTrainingLevels.practiceNotes(5), hasLength(12));
-    expect(EarTrainingLevels.practiceSequenceLength(5), 3);
+  test('identificação de notas cresce conforme os níveis funcionais', () {
+    expect(EarTrainingLevels.practiceNotes(1), [0, 7]);
+    expect(EarTrainingLevels.practiceNotes(2), [0, 4, 7]);
+    expect(EarTrainingLevels.practiceNotes(3), [0, 2, 4, 5, 7]);
+    expect(EarTrainingLevels.practiceNotes(4), [0, 2, 4, 5, 7, 9, 11]);
+    expect(EarTrainingLevels.practiceNotes(5), [0, 2, 4, 5, 7, 9, 11]);
   });
 
   test('intervalos começam com saltos grandes e avançam aos menores', () {
