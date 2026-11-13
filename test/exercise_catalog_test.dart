@@ -24,7 +24,7 @@ void main() {
 
     expect(find.text('Violão: identificar notas'), findsOneWidget);
     expect(find.text('Abrir simulador de Violão'), findsOneWidget);
-    expect(find.text('Prática: reconhecer notas'), findsNothing);
+    expect(find.text('Identificar a nota'), findsNothing);
     expect(find.text('Intervalos auditivos'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());

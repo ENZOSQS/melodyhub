@@ -58,8 +58,8 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
 
   late final List<_Activity> _activities = [
     _Activity(
-      'Prática: reconhecer notas',
-      'Ouça e responda no ritmo que funciona para você.',
+      'Identificar a nota',
+      'Ouça a nota dentro do tom de Dó e descubra qual é.',
       'Iniciante',
       Icons.hearing,
       () => const LearningPathScreen(track: LearningTrack.pratica),
@@ -68,7 +68,7 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
     ),
     _Activity(
       'Intervalos auditivos',
-      'Compare duas notas e aprenda a reconhecer a distância entre elas.',
+      'Ouça duas notas e diga qual é a distância entre elas.',
       'Iniciante',
       Icons.graphic_eq,
       () => const LearningPathScreen(track: LearningTrack.intervalos),
@@ -84,8 +84,8 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
       'Teoria',
     ),
     _Activity(
-      'Ditado rítmico',
-      'Ouça o padrão, conte o pulso e repita tocando na tela.',
+      'Andamento (BPM)',
+      'Ouça um andamento e ajuste o BPM até ficar igual.',
       'Iniciante',
       Icons.timer,
       () => const RhythmExerciseScreen(),
@@ -98,15 +98,6 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
       Icons.show_chart,
       () => const MusicConceptsScreen(exercise: ConceptExercise.scale),
       'Harmonia',
-    ),
-    _Activity(
-      'Acordes',
-      'Treine a diferença entre acordes maiores, menores e outras cores.',
-      'Intermediário',
-      Icons.piano,
-      () => const MusicConceptsScreen(exercise: ConceptExercise.chord),
-      'Harmonia',
-      instrumentos: const ['Teclado'],
     ),
     _Activity(
       'Violão: identificar notas',

@@ -30,4 +30,8 @@ void main() {
   test('tipo desconhecido é ignorado', () {
     expect(sugestaoContinuar({'tipo': 'Outro'}), isNull);
   });
+
+  test('registros antigos do exercício de acordes são ignorados', () {
+    expect(sugestaoContinuar({'tipo': 'Acorde', 'dificuldade': 2}), isNull);
+  });
 }

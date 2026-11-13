@@ -351,7 +351,7 @@ class PerformanceScreen extends StatelessWidget {
       } else if (key.contains('ritmo')) {
         suggestions.add((
           'Revisar ritmo',
-          '$total respostas · ${rate.round()}% de acerto. Reduza o BPM e conte as subdivisões em voz alta.',
+          '$total respostas · ${rate.round()}% de acerto. Compare o seu BPM com o original antes de confirmar.',
           () => const RhythmExerciseScreen(),
         ));
       } else if (key.contains('escala')) {
@@ -360,16 +360,10 @@ class PerformanceScreen extends StatelessWidget {
           '$total respostas · ${rate.round()}% de acerto. Compare a terça maior e a menor.',
           () => const MusicConceptsScreen(exercise: ConceptExercise.scale),
         ));
-      } else if (key.contains('acorde')) {
-        suggestions.add((
-          'Revisar acordes',
-          '$total respostas · ${rate.round()}% de acerto. Escute a terça e a quinta do acorde.',
-          () => const MusicConceptsScreen(exercise: ConceptExercise.chord),
-        ));
       } else if (key.contains('memória') || key.contains('prát')) {
         suggestions.add((
-          'Revisar memória de notas',
-          '$total respostas · ${rate.round()}% de acerto. Use sequências menores e ouça novamente.',
+          'Revisar identificação de notas',
+          '$total respostas · ${rate.round()}% de acerto. Ouça a cadência e compare a nota com o Dó.',
           () => const ExercisesScreen(),
         ));
       } else if (key.contains('teor') ||
@@ -398,7 +392,6 @@ class PerformanceScreen extends StatelessWidget {
       'Violão' => const GuitarNoteExerciseScreen(),
       'Intervalo' => const IntervalExercisesScreen(),
       'Escala' => const MusicConceptsScreen(exercise: ConceptExercise.scale),
-      'Acorde' => const MusicConceptsScreen(exercise: ConceptExercise.chord),
       'Teórico' => const TheoryExercisesScreen(),
       'Ritmo' => const RhythmExerciseScreen(),
       _ => const ExercisesScreen(),
@@ -412,7 +405,6 @@ class PerformanceScreen extends StatelessWidget {
     'Teórico' => Icons.menu_book_outlined,
     'Ritmo' => Icons.timer_outlined,
     'Escala' => Icons.show_chart_rounded,
-    'Acorde' => Icons.piano_outlined,
     _ => Icons.hearing_rounded,
   };
 

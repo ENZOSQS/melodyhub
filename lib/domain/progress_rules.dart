@@ -186,16 +186,13 @@ ResultadoExercicio aplicarExercicio({
   final habilidadesEtapas = _mapa(dados['habilidadesEtapas']);
   var ditadosRitmicosRespondidos = _numero(dados['ditadosRitmicosRespondidos']);
   var escalasRespondidas = _numero(dados['escalasRespondidas']);
-  var acordesRespondidos = _numero(dados['acordesRespondidos']);
-  if (tipo == 'Ritmo' || tipo == 'Escala' || tipo == 'Acorde') {
-    final habilidade = switch (tipo) {
-      'Ritmo' => 'ritmo',
-      'Escala' => 'escalas',
-      _ => 'acordes',
-    };
+  // O exercício auditivo de acordes saiu do escopo; o contador antigo só é
+  // preservado para não apagar dados de quem já tinha praticado.
+  final acordesRespondidos = _numero(dados['acordesRespondidos']);
+  if (tipo == 'Ritmo' || tipo == 'Escala') {
+    final habilidade = tipo == 'Ritmo' ? 'ritmo' : 'escalas';
     if (tipo == 'Ritmo') ditadosRitmicosRespondidos++;
     if (tipo == 'Escala') escalasRespondidas++;
-    if (tipo == 'Acorde') acordesRespondidos++;
 
     final etapasDaHabilidade = _mapa(habilidadesEtapas[habilidade]);
     final nivelAtual = _nivel(etapasDaHabilidade['nivel'], 5);

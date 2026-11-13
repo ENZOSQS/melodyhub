@@ -436,7 +436,6 @@ class _HomePageState extends State<HomePage> {
     AtividadeContinuar.intervalos => Icons.graphic_eq_rounded,
     AtividadeContinuar.ritmo => Icons.timer_outlined,
     AtividadeContinuar.escalas => Icons.show_chart_rounded,
-    AtividadeContinuar.acordes => Icons.piano_outlined,
     AtividadeContinuar.violao => Icons.music_note_outlined,
   };
 
@@ -453,9 +452,6 @@ class _HomePageState extends State<HomePage> {
     AtividadeContinuar.ritmo => const RhythmExerciseScreen(),
     AtividadeContinuar.escalas => const MusicConceptsScreen(
       exercise: ConceptExercise.scale,
-    ),
-    AtividadeContinuar.acordes => const MusicConceptsScreen(
-      exercise: ConceptExercise.chord,
     ),
     AtividadeContinuar.violao => const GuitarNoteExerciseScreen(),
   };

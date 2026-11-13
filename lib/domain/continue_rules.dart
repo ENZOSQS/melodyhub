@@ -1,5 +1,5 @@
 /// Atividades que o cartão "Continue de onde parou" consegue reabrir.
-enum AtividadeContinuar { teoria, pratica, intervalos, ritmo, escalas, acordes, violao }
+enum AtividadeContinuar { teoria, pratica, intervalos, ritmo, escalas, violao }
 
 /// Sugestão do cartão "Continue de onde parou", calculada a partir do último
 /// evento do histórico do aluno (`usuarios/{uid}/historico`).
@@ -26,9 +26,8 @@ SugestaoContinuar? sugestaoContinuar(Map<String, dynamic>? ultimoEvento) {
     'Teórico' => (AtividadeContinuar.teoria, 'Teoria', true),
     'Prático' => (AtividadeContinuar.pratica, 'Identificar a nota', true),
     'Intervalo' => (AtividadeContinuar.intervalos, 'Intervalos', true),
-    'Ritmo' => (AtividadeContinuar.ritmo, 'Ritmo', false),
+    'Ritmo' => (AtividadeContinuar.ritmo, 'Andamento (BPM)', false),
     'Escala' => (AtividadeContinuar.escalas, 'Escalas', false),
-    'Acorde' => (AtividadeContinuar.acordes, 'Acordes', false),
     'Violão' => (AtividadeContinuar.violao, 'Notas no violão', false),
     _ => (null, '', false),
   };

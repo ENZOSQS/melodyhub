@@ -116,7 +116,7 @@ void main() {
     });
   }
 
-  for (final tipo in ['Ritmo', 'Escala', 'Acorde']) {
+  for (final tipo in ['Ritmo', 'Escala']) {
     test('habilidade $tipo progride em habilidadesEtapas', () {
       final dados = _rodada(
         tipo: tipo,
@@ -127,7 +127,6 @@ void main() {
       final chave = {
         'Ritmo': 'ritmo',
         'Escala': 'escalas',
-        'Acorde': 'acordes',
       }[tipo]!;
       final habilidade = (dados['habilidadesEtapas'] as Map)[chave] as Map;
       expect(habilidade['nivel'], 2);
