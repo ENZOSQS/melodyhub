@@ -403,6 +403,6 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 
 ### Registro 14A — Motor de som sem samples
 - Arquivos: criado `lib/services/note_player.dart`; removidos `lib/utils/sample_map.dart`, `lib/utils/guitar_sample_map.dart` e os samples de piano e violão. Telas do teclado, exercícios, conceitos musicais e violão agora usam o sintetizador; permanecem no `MusicAudioService` apenas os WAVs do ritmo. Créditos e teste de assets atualizados.
-- Decisões: usado o plano B com ondas senoidal e triangular via `flutter_soloud`, afinação MIDI exata, ataque de 5 ms, liberação de 300 ms e ganho limitado. Não há SoundFont nem licença de áudio de terceiros; o pacote `flutter_soloud` usa MIT.
+- Decisões: usado o plano B com `flutter_soloud`, afinação MIDI exata, vozes iniciadas em volume zero, ataque de 5 ms e liberação de 300 ms. O piano usa três senoidais com decaimento; o violão usa triangular e segundo harmônico senoidal com decaimento mais rápido. O ganho é limitado também em acordes de quatro notas. Não há SoundFont nem licença de áudio de terceiros; o pacote `flutter_soloud` usa MIT.
 - Pendências: nenhuma nesta parte.
-- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (48 testes).
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (48 testes). APK de teste gerado depois do ajuste de timbre.
