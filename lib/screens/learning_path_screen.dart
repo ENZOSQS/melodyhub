@@ -36,18 +36,18 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       'Desafio especialista',
     ],
     LearningTrack.pratica: [
-      'Uma nota de cada vez',
-      'Primeiras sequências',
-      'Memória em movimento',
-      'Sequências avançadas',
-      'Concerto final',
+      'Dó e Sol',
+      'Dó, Mi e Sol',
+      'Cinco notas',
+      'Escala completa',
+      'Duas oitavas',
     ],
     LearningTrack.intervalos: [
-      'Segundas e terças',
-      'Segundas, terças e quartas',
-      'Quintas e comparação',
-      'Sextas e sétimas',
-      'Intervalos cromáticos',
+      'Sobe ou desce?',
+      'Terça, quinta e oitava',
+      'Segundas a quintas',
+      'Mais intervalos',
+      'Todos os intervalos',
     ],
   };
 

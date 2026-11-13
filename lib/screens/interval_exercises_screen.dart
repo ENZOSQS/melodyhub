@@ -1,20 +1,22 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../domain/feedback_rules.dart';
+import '../data/theory_explanations.dart';
 import '../domain/answer_feedback_rules.dart';
 import '../domain/ear_training_levels.dart';
-import '../data/theory_explanations.dart';
 import '../services/note_player.dart';
 import '../services/progress_service.dart';
-import '../services/app_preferences.dart';
 import '../theme/app_theme.dart';
-import '../utils/note_names.dart';
-import '../widgets/mh_ui.dart';
-import '../widgets/piano_answer_keyboard.dart';
+import '../widgets/exercise_ui.dart';
 import '../widgets/theory_explanation_sheet.dart';
 
+/// Intervalos: o aluno ouve duas notas e responde pelo nome do intervalo.
+///
+/// Antes de cada nível aparece "Conheça os sons", com um cartão por intervalo
+/// para ouvir à vontade. Na questão, um toque longo numa resposta toca aquela
+/// opção a partir da mesma nota inicial, para comparar antes de responder.
 class IntervalExercisesScreen extends StatefulWidget {
   const IntervalExercisesScreen({super.key, this.nivelSelecionado});
 
@@ -27,28 +29,8 @@ class IntervalExercisesScreen extends StatefulWidget {
 
 class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     with WidgetsBindingObserver {
-  static const _background = Color(0xFF171316);
-  static const _accent = Color(0xFFE9B96E);
-  static const Duration _duracaoNormal = Duration(milliseconds: 300);
-  static const Duration _duracaoLenta = Duration(milliseconds: 620);
-  static const Duration _pausaNormal = Duration(milliseconds: 55);
-  static const Duration _pausaLenta = Duration(milliseconds: 150);
-  static final _notes = List.generate(13, (index) => (index, 48 + index));
-  static const _intervalNames = [
-    '',
-    'Segunda menor',
-    'Segunda maior',
-    'Terça menor',
-    'Terça maior',
-    'Quarta justa',
-    'Trítono',
-    'Quinta justa',
-    'Sexta menor',
-    'Sexta maior',
-    'Sétima menor',
-    'Sétima maior',
-    'Oitava justa',
-  ];
+  static const _noteMs = 650;
+  static const _gapMs = 120;
 
   final _notePlayer = NotePlayer.instance;
   final _progress = ProgressService();
@@ -57,62 +39,35 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
 
   int _level = 1;
   int _currentLevel = 1;
+  int _nextLevel = 1;
+  int _roundDone = 0;
+  int _sessionQuestions = 0;
+  int _sessionCorrect = 0;
+  int _sessionStars = 0;
+  int _combo = 0;
   int _attempts = 0;
+  int _shakeToken = 0;
+  int? _shaking;
+
   bool _loading = true;
+  bool _intro = true;
   bool _playing = false;
   bool _saving = false;
-  bool? _correct;
-  bool _showHint = false;
-  bool _showExplanation = false;
-  bool _slowAudio = false;
+  bool _solved = false;
+  bool _revealed = false;
   bool _inForeground = true;
-  String? _selected;
-  int _nextLevel = 1;
-  int _nextAttempts = 0;
-  int _sequenciaAcertosSessao = 0;
-  int _tentativasQuestao = 0;
-  int _comboPrimeiraTentativa = 0;
-  int _estrelasRodada = 0;
-  int _questoesRodada = 0;
-  int? _ultimoPalpiteMidi;
-  bool _respostaRevelada = false;
-  final Map<int, AnswerDistance> _tentativasColoridas = {};
-  NivelApoio? _apoioResposta;
-  late int _degree;
+  String? _error;
+  String? _feedback;
+  bool? _feedbackPositive;
+
+  late int _semitones;
   late bool _ascending;
-  late (int, int) _firstNote;
-  late (int, int) _secondNote;
-  String _tipoNota = 'solfejo';
+  late int _start;
+  final Set<int> _wrong = {};
 
-  Duration get _noteDuration => _slowAudio ? _duracaoLenta : _duracaoNormal;
-  Duration get _noteGap => _slowAudio ? _pausaLenta : _pausaNormal;
-  NivelApoio get _apoioAtual => nivelDeApoio(
-    nivelEtapa: _level,
-    sequenciaAcertos: _sequenciaAcertosSessao,
-  );
-  NivelApoio get _apoioExibido =>
-      _selected != null ? _apoioResposta ?? _apoioAtual : _apoioAtual;
-
-  String get _levelInstruction => const [
-    'Escolha se a segunda nota ficou mais aguda ou mais grave. O tamanho do salto varia.',
-    'Ouça saltos ascendentes de 2, 7 ou 12 semitons: 2ª maior, 5ª justa ou 8ª justa.',
-    'Ouça saltos ascendentes de 2, 4, 5, 7 ou 12 semitons.',
-    'Reconheça intervalos ascendentes de 1 a 12 semitons.',
-    'Reconheça intervalos de 1 a 12 semitons, subindo ou descendo.',
-  ][_level - 1];
-
-  String get _intervalHint => _level == 1
-      ? 'Compare o contorno do som: notas agudas são finas como apito; notas graves, encorpadas como trovão.'
-      : 'Cante primeiro a nota inicial e depois a seguinte. Ignore se o som subiu ou desceu; compare apenas o tamanho do salto.';
-
-  Set<int>? get _allowedAnswerMidis {
-    if (_level < 2 || _level > 3) return null;
-    final initialMidi = _midiOf(_firstNote);
-    return EarTrainingLevels.intervalSemitones(_level)
-        .map((semitone) => initialMidi + semitone)
-        .where((midi) => midi >= 48 && midi <= 60)
-        .toSet();
-  }
+  List<int> get _options => EarTrainingLevels.intervalSemitones(_level);
+  int get _end => _ascending ? _start + _semitones : _start - _semitones;
+  bool get _busy => _playing || _saving;
 
   @override
   void initState() {
@@ -125,6 +80,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   void dispose() {
     _timer.stop();
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_notePlayer.stopAll());
     super.dispose();
   }
 
@@ -133,811 +89,532 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     _inForeground = state == AppLifecycleState.resumed;
     if (!_inForeground) {
       _timer.stop();
-      _notePlayer.stopAll();
-    } else if (!_loading && _selected == null && !_playing) {
-      _playPair();
+      unawaited(_notePlayer.stopAll());
     }
   }
 
   Future<void> _initialize() async {
     try {
-      final data = await _progress.buscarProgresso();
-      final tipoNota = await AppPreferences.noteType();
-      if (!mounted) return;
+      final values = await Future.wait([
+        _progress.buscarProgresso(),
+        _notePlayer.initialize(),
+      ]);
+      final data = values[0] as Map<String, dynamic>;
       final currentLevel = _number(data['nivelIntervalos']).clamp(1, 5).toInt();
       final level = (widget.nivelSelecionado ?? currentLevel)
           .clamp(1, currentLevel)
           .toInt();
-      final stages = Map<String, dynamic>.from(
-        data['intervaloEtapas'] as Map? ?? const <String, dynamic>{},
-      );
-      final stage = Map<String, dynamic>.from(
-        stages['$level'] as Map? ?? const <String, dynamic>{},
-      );
-      await _notePlayer.initialize();
       if (!mounted) return;
       setState(() {
-        _tipoNota = tipoNota;
         _currentLevel = currentLevel;
-        _nextLevel = currentLevel;
+        _nextLevel = level;
         _level = level;
-        _attempts = level == currentLevel
-            ? _number(data['tentativasIntervalosNivel'])
-            : _number(stage['rodadaTentativas']);
+        _roundDone = _roundFrom(data, level, currentLevel);
+        _newQuestion();
         _loading = false;
+        // O nível 1 (sobe ou desce?) não precisa de apresentação.
+        _intro = level > 1;
       });
-      _newQuestion();
-      await _playPair();
-    } catch (_) {
-      if (mounted) {
-        setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível carregar seu progresso.'),
-          ),
-        );
-      }
+      if (!_intro) unawaited(_playQuestion());
+    } catch (error) {
+      debugPrint('Falha ao iniciar intervalos: $error');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Não foi possível carregar seu progresso. Confira a conexão.';
+      });
     }
+  }
+
+  int _roundFrom(Map<String, dynamic> data, int level, int currentLevel) {
+    if (level == currentLevel) return _number(data['tentativasIntervalosNivel']);
+    final stages = Map<String, dynamic>.from(
+      data['intervaloEtapas'] as Map? ?? const <String, dynamic>{},
+    );
+    final stage = Map<String, dynamic>.from(
+      stages['$level'] as Map? ?? const <String, dynamic>{},
+    );
+    return _number(stage['rodadaTentativas']);
   }
 
   void _newQuestion() {
-    final candidates = EarTrainingLevels.intervalSemitones(_level);
-    _degree = candidates[_random.nextInt(candidates.length)];
+    final options = _options;
+    _semitones = options[_random.nextInt(options.length)];
     _ascending = EarTrainingLevels.intervalCanDescend(_level)
         ? _random.nextBool()
-        : _level == 1
-        ? _random.nextBool()
         : true;
-    final firstNoteIndex = _random.nextInt(_notes.length - _degree);
-    final low = _notes[firstNoteIndex];
-    final high = _notes[firstNoteIndex + _degree];
-    _firstNote = _ascending ? low : high;
-    _secondNote = _ascending ? high : low;
+    final starts = EarTrainingLevels.intervalStarts(
+      _semitones,
+      descending: !_ascending,
+    );
+    _start = starts[_random.nextInt(starts.length)];
+    _attempts = 0;
+    _solved = false;
+    _revealed = false;
+    _wrong.clear();
+    _feedback = null;
+    _feedbackPositive = null;
+    _timer
+      ..stop()
+      ..reset();
   }
 
-  Future<void> _playPair() async {
-    if (_playing) return;
+  Future<void> _playInterval(int start, int semitones, bool ascending) async {
+    final end = ascending ? start + semitones : start - semitones;
+    await _notePlayer.playNote(start, durationMs: _noteMs);
+    await Future<void>.delayed(const Duration(milliseconds: _gapMs));
+    await _notePlayer.playNote(end, durationMs: _noteMs);
+  }
+
+  Future<void> _guarded(Future<void> Function() action) async {
+    if (_playing || !_inForeground) return;
     _timer.stop();
     setState(() => _playing = true);
     try {
-      for (final note in [_firstNote, _secondNote]) {
-        if (!_inForeground) return;
-        await _notePlayer.playNote(
-          note.$2,
-          durationMs: _noteDuration.inMilliseconds,
-        );
-        await Future<void>.delayed(_noteGap);
-      }
-    } catch (_) {
+      await action();
+    } catch (error) {
+      debugPrint('Falha de áudio nos intervalos: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Não foi possível tocar o som. Confira o volume e toque em Ouvir novamente.',
+              'Não foi possível tocar o som. Aumente o volume e toque em Repetir.',
             ),
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _playing = false);
-      if (mounted && _selected == null && _inForeground) {
-        _timer.start();
-      }
-    }
-  }
-
-  int _midiOf((int, int) note) => note.$2;
-
-  String _noteName(int midi) => nomeNota(midi, _tipoNota);
-
-  Future<void> _playKeyboardAnswer(int midi) async {
-    if (_playing || _saving || _selected != null || _level == 1) return;
-    _timer.stop();
-    setState(() => _playing = true);
-    try {
-      await _notePlayer.playNote(midi, durationMs: 620);
-    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível tocar o som. Confira o volume e toque em Ouvir novamente.',
-            ),
-          ),
-        );
+        setState(() => _playing = false);
+        if (!_solved && _inForeground) _timer.start();
       }
-      return;
-    } finally {
-      if (mounted) setState(() => _playing = false);
     }
-    if (mounted) await _answer(_intervalNames[_degree], playedMidi: midi);
   }
 
-  Future<void> _answer(String answer, {required int playedMidi}) async {
-    if (_playing || _saving || _selected != null) return;
-    final targetMidi = _midiOf(_secondNote);
-    _tentativasQuestao++;
-    if (playedMidi != targetMidi) {
-      _comboPrimeiraTentativa = 0;
+  Future<void> _playQuestion() =>
+      _guarded(() => _playInterval(_start, _semitones, _ascending));
+
+  /// Toque longo: ouvir uma opção a partir da mesma nota inicial.
+  Future<void> _preview(int semitones) {
+    if (_level == 1) {
+      // No nível 1 a opção é a direção: toca um salto de quinta nesse sentido.
+      final up = semitones > 0;
+      return _guarded(() => _playInterval(_start, 7, up));
+    }
+    return _guarded(() => _playInterval(_start, semitones, _ascending));
+  }
+
+  Future<void> _answer(int choice) async {
+    if (_busy || _solved || _wrong.contains(choice)) return;
+    _timer.stop();
+    _attempts++;
+    final correct = _level == 1
+        ? (choice > 0) == _ascending
+        : choice == _semitones;
+
+    if (correct) {
       setState(() {
-        _ultimoPalpiteMidi = playedMidi;
-        _tentativasColoridas[playedMidi] = AnswerFeedbackRules.distance(
-          targetMidi,
-          playedMidi,
-        );
-        _showExplanation = true;
+        _solved = true;
+        _feedback = _successText();
+        _feedbackPositive = true;
       });
-      await _compararIntervalo(playedMidi, targetMidi);
-      if (_inForeground) _timer.start();
+      await _guarded(
+        () => _notePlayer.playChord([_start, _end], durationMs: 900),
+      );
+      final saved = await _record();
+      if (saved) await _advance();
       return;
     }
-    await _registrarResultado(
-      answer: answer,
-      response: 'Nota ${_noteName(playedMidi)}',
-      solved: true,
-    );
-  }
 
-  Future<void> _chooseDirection(bool selectedAscending) async {
-    if (_playing || _saving || _selected != null) return;
-    _tentativasQuestao++;
-    if (selectedAscending != _ascending) {
-      _comboPrimeiraTentativa = 0;
+    _wrong.add(choice);
+    _shakeToken++;
+    if (_attempts >= 3) {
       setState(() {
-        _ultimoPalpiteMidi = null;
-        _showExplanation = true;
+        _revealed = true;
+        _solved = true;
+        _shaking = choice;
+        _feedback = 'A resposta era ${_answerLabel()}. ${_songLine()}'.trim();
+        _feedbackPositive = false;
       });
-      await _compararIntervalo(_midiOf(_firstNote), _midiOf(_secondNote));
-      if (_inForeground) _timer.start();
+      await _guarded(() => _playInterval(_start, _semitones, _ascending));
+      final saved = await _record();
+      if (saved) await _advance(delay: const Duration(milliseconds: 2200));
       return;
     }
-    await _registrarResultado(
-      answer: selectedAscending ? 'Mais aguda' : 'Mais grave',
-      response: selectedAscending ? 'Mais aguda' : 'Mais grave',
-      solved: true,
-    );
+
+    setState(() {
+      _shaking = choice;
+      _feedback = _level == 1
+          ? 'Ouça de novo: o som ${_ascending ? 'sobe' : 'desce'}?'
+          : 'Você escolheu ${EarTrainingLevels.intervalName(choice)}. Ouça a diferença.';
+      _feedbackPositive = false;
+    });
+    await _guarded(() async {
+      if (_level > 1) {
+        await _playInterval(_start, choice, _ascending);
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+      }
+      await _playInterval(_start, _semitones, _ascending);
+    });
+    if (mounted) setState(() => _shaking = null);
   }
 
-  Future<void> _compararIntervalo(int firstMidi, int secondMidi) async {
-    if (!mounted) return;
-    _timer.stop();
-    setState(() => _playing = true);
-    try {
-      for (final midi in [firstMidi, secondMidi]) {
-        await _notePlayer.playNote(midi, durationMs: 700);
-        await Future<void>.delayed(const Duration(milliseconds: 180));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível comparar os sons. Confira o volume e toque em Ouvir novamente.',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _playing = false);
+  String _answerLabel() => _level == 1
+      ? (_ascending ? 'Sobe' : 'Desce')
+      : EarTrainingLevels.intervalName(_semitones);
+
+  String _songLine() {
+    if (_level == 1) return '';
+    final song = intervalTheory[_semitones]?.song;
+    return song == null ? '' : 'Lembra: $song.';
+  }
+
+  String _successText() {
+    final base = _attempts == 1 ? 'Isso!' : 'Muito bem!';
+    if (_level == 1) {
+      return '$base O som ${_ascending ? 'sobe' : 'desce'}.';
     }
+    final song = _songLine();
+    return '$base ${EarTrainingLevels.intervalName(_semitones)}. $song'.trim();
   }
 
-  Future<void> _mostrarResposta() async {
-    if (_tentativasQuestao < 3 || _selected != null || _saving) return;
-    _respostaRevelada = true;
-    await _registrarResultado(
-      answer: 'Resposta revelada',
-      response: 'Resposta revelada após $_tentativasQuestao tentativas',
-      solved: false,
-      revealed: true,
-    );
-  }
-
-  Future<void> _registrarResultado({
-    required String answer,
-    required String response,
-    required bool solved,
-    bool revealed = false,
-  }) async {
-    final apoioResposta = _apoioAtual;
-    final targetMidi = _midiOf(_secondNote);
-    final isCountedCorrect = AnswerFeedbackRules.countsAsCorrect(
-      _tentativasQuestao,
-      revealed: revealed,
+  Future<bool> _record() async {
+    final countsAsCorrect = AnswerFeedbackRules.countsAsCorrect(
+      _attempts,
+      revealed: _revealed,
     );
     final stars = AnswerFeedbackRules.starsForAttempt(
-      _tentativasQuestao,
-      revealed: revealed,
+      _attempts,
+      revealed: _revealed,
     );
     final durationMs = _timer.elapsed.inMilliseconds;
-    final duration = (durationMs / 1000).ceil();
-    _timer.stop();
-    setState(() {
-      _selected = answer;
-      _correct = solved;
-      _showExplanation = !solved || _tentativasQuestao > 1;
-      _apoioResposta = apoioResposta;
-      _respostaRevelada = revealed;
-      _saving = true;
-    });
+    setState(() => _saving = true);
     try {
-      if (revealed && apoioResposta == NivelApoio.iniciante) {
-        await _playCorrectExample();
-      }
       await _progress.registrarExercicio(
-        acertou: isCountedCorrect,
+        acertou: countsAsCorrect,
         tipo: 'Intervalo',
         pergunta: _level == 1
-            ? 'A segunda nota é mais aguda ou mais grave?'
-            : 'Ouça o intervalo e reproduza no teclado a nota de chegada.',
-        resposta: response,
-        respostaCorreta: _level == 1
-            ? (_ascending ? 'Mais aguda' : 'Mais grave')
-            : '${_intervalNames[_degree]} · nota ${_noteName(targetMidi)}',
+            ? 'O som sobe ou desce?'
+            : 'Qual é este intervalo?',
+        resposta: _revealed ? 'Resposta revelada' : _answerLabel(),
+        respostaCorreta: _answerLabel(),
         dificuldade: _level,
         questaoId:
-            'intervalo_${_level}_${_degree}_${_ascending ? 'asc' : 'desc'}',
+            'intervalo_${_level}_${_semitones}_${_ascending ? 'asc' : 'desc'}',
         categoria: 'Percepção de intervalos',
-        itemAvaliado: _intervalNames[_degree],
-        duracaoSegundos: duration,
+        itemAvaliado: _level == 1
+            ? 'Direção do som'
+            : EarTrainingLevels.intervalName(_semitones),
+        duracaoSegundos: (durationMs / 1000).ceil(),
         duracaoMilissegundos: durationMs,
-        tentativas: _tentativasQuestao,
+        tentativas: _attempts,
         estrelas: stars,
       );
       final data = await _progress.buscarProgresso();
-      if (!mounted) return;
-      final wasCurrentLevel = _level == _currentLevel;
+      if (!mounted) return false;
+      final wasCurrent = _level == _currentLevel;
       final currentLevel = _number(data['nivelIntervalos']).clamp(1, 5).toInt();
-      final nextLevel = wasCurrentLevel ? currentLevel : _level;
-      final stages = Map<String, dynamic>.from(
-        data['intervaloEtapas'] as Map? ?? const <String, dynamic>{},
-      );
-      final stage = Map<String, dynamic>.from(
-        stages['$nextLevel'] as Map? ?? const <String, dynamic>{},
-      );
+      final nextLevel = wasCurrent ? currentLevel : _level;
       setState(() {
         _currentLevel = currentLevel;
         _nextLevel = nextLevel;
-        _nextAttempts = nextLevel == currentLevel
-            ? _number(data['tentativasIntervalosNivel'])
-            : _number(stage['rodadaTentativas']);
-        _attempts = _nextAttempts;
-        _sequenciaAcertosSessao = isCountedCorrect
-            ? _sequenciaAcertosSessao + 1
-            : 0;
-        _comboPrimeiraTentativa = _tentativasQuestao == 1 && isCountedCorrect
-            ? _comboPrimeiraTentativa + 1
-            : 0;
-        _estrelasRodada += stars;
-        _questoesRodada++;
+        _roundDone = _roundFrom(data, nextLevel, currentLevel);
+        _combo = countsAsCorrect && _attempts == 1 ? _combo + 1 : 0;
+        _sessionStars += stars;
+        _sessionQuestions++;
+        if (countsAsCorrect) _sessionCorrect++;
         _saving = false;
       });
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-          _selected = null;
-          _correct = null;
-          _apoioResposta = null;
-          _ultimoPalpiteMidi = null;
-          _timer
-            ..reset()
-            ..start();
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível salvar a resposta.')),
-        );
-      }
+      return true;
+    } catch (error) {
+      debugPrint('Falha ao salvar intervalo: $error');
+      if (!mounted) return false;
+      setState(() {
+        _saving = false;
+        _solved = false;
+        _revealed = false;
+        _feedback = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível salvar sua resposta. Confira a conexão e responda de novo.',
+          ),
+        ),
+      );
+      return false;
     }
   }
 
-  Future<void> _nextQuestion() async {
-    final encerrouRodada = _questoesRodada >= 10;
+  Future<void> _advance({
+    Duration delay = const Duration(milliseconds: 1600),
+  }) async {
+    await Future<void>.delayed(delay);
+    if (!mounted) return;
+    if (_sessionQuestions >= 10) {
+      final again = await showRoundSummary(
+        context,
+        stars: _sessionStars,
+        correct: _sessionCorrect,
+        total: _sessionQuestions,
+      );
+      if (!mounted) return;
+      if (again != true) {
+        Navigator.pop(context);
+        return;
+      }
+      _sessionQuestions = 0;
+      _sessionCorrect = 0;
+      _sessionStars = 0;
+    }
+    final levelChanged = _nextLevel != _level;
     setState(() {
       _level = _nextLevel;
-      _attempts = _nextAttempts;
-      _selected = null;
-      _correct = null;
-      _tentativasQuestao = 0;
-      _tentativasColoridas.clear();
-      _ultimoPalpiteMidi = null;
-      _respostaRevelada = false;
-      _showHint = false;
-      _showExplanation = false;
-      _apoioResposta = null;
       _newQuestion();
-      if (encerrouRodada) {
-        _questoesRodada = 0;
-        _estrelasRodada = 0;
-      }
+      _intro = levelChanged && _level > 1;
     });
-    await _playPair();
+    if (!_intro) await _playQuestion();
   }
 
-  Future<void> _playCorrectExample() async {
-    if (!_inForeground) return;
-    setState(() => _playing = true);
-    try {
-      await _notePlayer.playNote(
-        _midiOf(_firstNote),
-        durationMs: _noteDuration.inMilliseconds,
-      );
-      await Future<void>.delayed(_noteGap);
-      await _notePlayer.playNote(
-        _midiOf(_secondNote),
-        durationMs: _noteDuration.inMilliseconds,
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível tocar a demonstração. Confira o volume e tente novamente.',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _playing = false);
-    }
+  void _startAfterIntro() {
+    setState(() => _intro = false);
+    unawaited(_playQuestion());
   }
 
-  Future<void> _playBothTogether() async {
-    if (_playing || _saving) return;
-    setState(() => _playing = true);
-    try {
-      await _notePlayer.playChord([
-        _midiOf(_firstNote),
-        _midiOf(_secondNote),
-      ], durationMs: 850);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível tocar as notas juntas. Confira o volume e tente novamente.',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _playing = false);
-    }
-  }
+  Future<void> _openTheory() => showTheoryExplanationSheet(
+    context,
+    explanation: _level == 1
+        ? registerTheory
+        : intervalTheory[_semitones] ?? registerTheory,
+    theory: _level == 1
+        ? registerTheory.theory
+        : (intervalTheory[_semitones] ?? registerTheory).theory,
+    onPlayExample: _intro ? null : _playQuestion,
+    exampleLabel: 'Ouvir a pergunta de novo',
+  );
 
-  Future<void> _playTheoryExample() async {
-    if (_playing || _saving) return;
-    setState(() => _playing = true);
-    try {
-      for (final midi in [48, 48 + _degree]) {
-        await _notePlayer.playNote(midi, durationMs: 750);
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível tocar o exemplo. Confira o volume e tente novamente.',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _playing = false);
-    }
-  }
-
-  Future<void> _openTheory() {
-    final explanation = intervalTheory[_degree]!;
-    return showTheoryExplanationSheet(
-      context,
-      explanation: explanation,
-      theory:
-          '${explanation.theory} Este intervalo tem $_degree semitons. Em uma oitava, há doze semitons.',
-      onPlayExample: _playTheoryExample,
-      exampleLabel: 'Ouvir este intervalo a partir do Dó',
-    );
-  }
-
-  String get _intervalExplanation {
-    final initialMidi = _midiOf(_firstNote);
-    final targetMidi = _midiOf(_secondNote);
-    final apoio = _apoioResposta ?? _apoioAtual;
-    final base = intervalTheory[_degree]!.theory;
-    if (_level == 1) {
-      final direction = _ascending ? 'mais aguda ↑' : 'mais grave ↓';
-      return 'A segunda nota é $direction. ${_noteName(initialMidi)} soa primeiro, depois ${_noteName(targetMidi)}. $base';
-    }
-    if (_ultimoPalpiteMidi == null) {
-      return '$base ${_intervalNames[_degree]} tem $_degree semitons. Toque a nota inicial destacada e conte até a nota de chegada.';
-    }
-    final distance = (_ultimoPalpiteMidi! - initialMidi).abs();
-    final delta = distance - _degree;
-    final extra = delta == 0
-        ? 'Você chegou à nota certa.'
-        : 'Seu salto teve ${delta.abs()} semitom${delta.abs() == 1 ? '' : 's'} ${delta > 0 ? 'a mais' : 'a menos'} que a resposta.';
-    final apoioText = apoio == NivelApoio.iniciante
-        ? 'Tudo bem errar: compare os dois sons e tente mais uma vez.'
-        : 'Você tocou ${_noteName(_ultimoPalpiteMidi!)} ($distance semitons a partir de ${_noteName(initialMidi)}). $extra';
-    return '$apoioText A resposta forma ${_intervalNames[_degree]}: $_degree semitons. $base';
-  }
+  int _number(dynamic value) => value is num ? value.toInt() : 0;
 
   @override
   Widget build(BuildContext context) {
-    final respondendo = _selected == null;
     return Scaffold(
-      backgroundColor: _background,
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator(color: _accent))
-            : ListView(
-                padding: const EdgeInsets.only(bottom: 28),
-                children: [
-                  const MelodyHeader(),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text(
-                          'Intervalos auditivos',
-                          style: TextStyle(
-                            color: AppColors.text,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -.4,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Nível $_level · ${nomeNivelApoio(_apoioExibido)}',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 17,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        MhSegmentedProgress(total: 10, concluidos: _attempts),
-                        const SizedBox(height: 8),
-                        Text(
-                          '$_attempts/10 respostas · ${_levelName(_level)} · 7 acertos em 10 liberam a próxima fase',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        Text(
-                          '🔥 $_comboPrimeiraTentativa seguidas na primeira tentativa',
-                          style: const TextStyle(
-                            color: AppColors.secondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                        if (_questoesRodada >= 10)
-                          _learningCard(
-                            'Rodada concluída: $_estrelasRodada de 30 estrelas. ${_estrelasRodada >= 24
-                                ? 'Excelente ouvido!'
-                                : _estrelasRodada >= 15
-                                ? 'Bom progresso: continue praticando.'
-                                : 'Cada tentativa ensina. Tente outra rodada!'}',
-                            Icons.emoji_events,
-                          ),
-                        const SizedBox(height: 22),
-                        Center(
-                          child: SizedBox(
-                            width: 300,
-                            height: 58,
-                            child: OutlinedButton.icon(
-                              onPressed: _playing || _saving ? null : _playPair,
-                              icon: Icon(
-                                _playing
-                                    ? Icons.graphic_eq_rounded
-                                    : Icons.play_arrow_rounded,
-                                size: 30,
-                              ),
-                              label: Text(
-                                _playing ? 'Reproduzindo…' : 'Ouvir novamente',
-                                style: const TextStyle(fontSize: 19),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: _playing || _saving
-                                ? null
-                                : () =>
-                                      setState(() => _slowAudio = !_slowAudio),
-                            icon: Icon(
-                              _slowAudio
-                                  ? Icons.slow_motion_video
-                                  : Icons.speed,
-                              size: 18,
-                            ),
-                            label: Text(
-                              _slowAudio
-                                  ? 'Escuta guiada lenta'
-                                  : 'Escuta normal',
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: OutlinedButton.icon(
-                            onPressed: _playing || _saving
-                                ? null
-                                : _playBothTogether,
-                            icon: const Icon(Icons.graphic_eq_rounded),
-                            label: const Text('Ouvir as duas notas juntas'),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (respondendo) ...[
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 260),
-                            child: MhCard(
-                              key: ValueKey(
-                                '$_level-$_degree-$_ascending-$_firstNote',
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.headphones_rounded,
-                                    color: AppColors.secondary,
-                                    size: 40,
-                                  ),
-                                  const MhDividerVertical(altura: 52),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _level == 1
-                                              ? 'A segunda nota é mais aguda ou mais grave?'
-                                              : _apoioAtual ==
-                                                    NivelApoio.avancado
-                                              ? 'Nota inicial: ${_noteName(_midiOf(_firstNote))}. Toque a nota de chegada.'
-                                              : 'Comece em ${_noteName(_midiOf(_firstNote))}. Toque no piano a nota que ouviu por último.',
-                                          style: const TextStyle(
-                                            color: AppColors.text,
-                                            fontSize: 17,
-                                            height: 1.35,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          _level == 1
-                                              ? 'Ouça o contorno: subiu ou desceu?'
-                                              : _levelInstruction,
-                                          style: const TextStyle(
-                                            color: AppColors.muted,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          if (_level == 1)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 68,
-                                    child: FilledButton.icon(
-                                      onPressed: _playing || _saving
-                                          ? null
-                                          : () => _chooseDirection(true),
-                                      icon: const Icon(
-                                        Icons.arrow_upward_rounded,
-                                      ),
-                                      label: const Text('Mais aguda'),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 68,
-                                    child: FilledButton.icon(
-                                      onPressed: _playing || _saving
-                                          ? null
-                                          : () => _chooseDirection(false),
-                                      icon: const Icon(
-                                        Icons.arrow_downward_rounded,
-                                      ),
-                                      label: const Text('Mais grave'),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            MhCard(
-                              padding: const EdgeInsets.all(8),
-                              child: PianoAnswerKeyboard(
-                                enabled: !_playing && !_saving,
-                                selectedMidi: {_midiOf(_firstNote)},
-                                enabledMidis: _allowedAnswerMidis,
-                                feedbackColors: {
-                                  for (final entry
-                                      in _tentativasColoridas.entries)
-                                    entry.key:
-                                        entry.value == AnswerDistance.close
-                                        ? const Color(0xFFF0C84B)
-                                        : const Color(0xFFB9474F),
-                                  if (_correct == true ||
-                                      (_tentativasQuestao > 0 && _level > 1))
-                                    _midiOf(_secondNote): Colors.green,
-                                },
-                                tipoNota: _tipoNota,
-                                onNotePressed: _playKeyboardAnswer,
-                              ),
-                            ),
-                          const SizedBox(height: 6),
-                          if (_tentativasQuestao > 0 && _selected == null) ...[
-                            Text(
-                              _level == 1
-                                  ? (_ascending
-                                        ? 'A resposta aponta para cima ↑'
-                                        : 'A resposta aponta para baixo ↓')
-                                  : _ultimoPalpiteMidi == null
-                                  ? 'Compare seu som com a nota inicial destacada.'
-                                  : 'Você tocou ${_noteName(_ultimoPalpiteMidi!)}; ouça a diferença.',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.muted),
-                            ),
-                            if (_showExplanation)
-                              _learningCard(
-                                _intervalExplanation,
-                                Icons.hearing,
-                              ),
-                          ],
-                          Center(
-                            child: Wrap(
-                              alignment: WrapAlignment.center,
-                              spacing: 8,
-                              children: [
-                                TextButton.icon(
-                                  onPressed: _playing || _saving
-                                      ? null
-                                      : () => setState(
-                                          () => _showHint = !_showHint,
-                                        ),
-                                  icon: const Icon(Icons.lightbulb_outline),
-                                  label: Text(
-                                    _showHint
-                                        ? 'Ocultar dica'
-                                        : 'Preciso de uma dica',
-                                  ),
-                                ),
-                                TextButton.icon(
-                                  onPressed: _openTheory,
-                                  icon: const Icon(Icons.menu_book),
-                                  label: const Text('Entenda a teoria'),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_showHint)
-                            _learningCard(_intervalHint, Icons.lightbulb),
-                          if (_tentativasQuestao >= 3 && _selected == null)
-                            Center(
-                              child: TextButton.icon(
-                                onPressed: _mostrarResposta,
-                                icon: const Icon(Icons.visibility_outlined),
-                                label: const Text('Mostrar resposta'),
-                              ),
-                            ),
-                        ],
-                        if (_correct != null) ...[
-                          const SizedBox(height: 6),
-                          MhFeedbackCard(
-                            acertou: _correct!,
-                            titulo: _correct!
-                                ? 'Isso! Intervalo reconhecido.'
-                                : 'Resposta revelada: ${_intervalNames[_degree]}.',
-                            detalhe:
-                                '${'★' * AnswerFeedbackRules.starsForAttempt(_tentativasQuestao, revealed: _respostaRevelada)} · $_tentativasQuestao tentativa(s)${AnswerFeedbackRules.countsAsCorrect(_tentativasQuestao, revealed: _respostaRevelada) ? ' · +10 XP' : ''}',
-                          ),
-                          const SizedBox(height: 8),
-                          Center(
-                            child: TextButton.icon(
-                              onPressed: _saving || _playing
-                                  ? null
-                                  : () => setState(
-                                      () =>
-                                          _showExplanation = !_showExplanation,
-                                    ),
-                              icon: const Icon(Icons.school_outlined),
-                              label: Text(
-                                _showExplanation
-                                    ? 'Ocultar explicação'
-                                    : 'Ver explicação',
-                              ),
-                            ),
-                          ),
-                          if (_showExplanation)
-                            _learningCard(_intervalExplanation, Icons.hearing),
-                          OutlinedButton.icon(
-                            onPressed: _openTheory,
-                            icon: const Icon(Icons.menu_book),
-                            label: const Text('Entenda a teoria'),
-                          ),
-                          if (_nextLevel > _level)
-                            const Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Text(
-                                'Fase concluída! A próxima etapa foi desbloqueada.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: _accent,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          if (_saving)
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(
-                                  color: _accent,
-                                ),
-                              ),
-                            )
-                          else
-                            SizedBox(
-                              height: 54,
-                              child: FilledButton.icon(
-                                onPressed: _nextQuestion,
-                                icon: const Icon(Icons.arrow_forward_rounded),
-                                label: const Text('Próximo intervalo'),
-                              ),
-                            ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Intervalos'),
+        actions: [
+          if (!_loading && _error == null && _level > 1)
+            IconButton(
+              tooltip: 'Conheça os sons',
+              onPressed: _busy ? null : () => setState(() => _intro = true),
+              icon: const Icon(Icons.library_music_outlined),
+            ),
+          IconButton(
+            tooltip: 'Entenda a teoria',
+            onPressed: _loading ? null : _openTheory,
+            icon: const Icon(Icons.menu_book_outlined),
+          ),
+        ],
       ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? _errorView()
+          : SafeArea(child: _intro ? _introView() : _questionView()),
     );
   }
 
-  String _levelName(int level) => const [
-    'Iniciante',
-    'Básico',
-    'Intermediário',
-    'Avançado',
-    'Especialista',
-  ][level - 1];
-
-  Widget _learningCard(String text, IconData icon) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: MhCard(
-      destaque: true,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _errorView() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(color: AppColors.text, height: 1.4),
-            ),
+          Text(_error!, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () {
+              setState(() {
+                _loading = true;
+                _error = null;
+              });
+              _initialize();
+            },
+            child: const Text('Tentar novamente'),
           ),
         ],
       ),
     ),
   );
 
-  int _number(dynamic value) => value is num ? value.toInt() : 0;
+  Widget _introView() => Column(
+    children: [
+      const SizedBox(height: 8),
+      ExerciseQuestion(
+        'Conheça os sons',
+        subtitle: 'Nível $_level · toque para ouvir cada intervalo',
+      ),
+      const SizedBox(height: 12),
+      Expanded(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          children: [
+            for (final semitones in _options)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: _playing
+                        ? null
+                        : () => _guarded(
+                            () => _playInterval(60, semitones, true),
+                          ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  EarTrainingLevels.intervalName(semitones),
+                                  style: const TextStyle(
+                                    color: AppColors.text,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                if (intervalTheory[semitones]?.song != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text(
+                                      intervalTheory[semitones]!.song!,
+                                      style: const TextStyle(
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.play_circle_fill_rounded,
+                            color: AppColors.primary,
+                            size: 38,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton(
+            onPressed: _playing ? null : _startAfterIntro,
+            child: const Text('Começar'),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Widget _questionView() => Column(
+    children: [
+      ExerciseStatusBar(
+        level: _level,
+        roundDone: _roundDone,
+        stars: _sessionStars,
+        combo: _combo,
+      ),
+      ExerciseQuestion(
+        _level == 1 ? 'O som sobe ou desce?' : 'Qual é este intervalo?',
+      ),
+      Expanded(
+        child: Center(
+          child: ExercisePlayButton(
+            playing: _playing,
+            onTap: _busy ? null : _playQuestion,
+          ),
+        ),
+      ),
+      ExerciseFeedbackLine(_feedback, positive: _feedbackPositive),
+      const SizedBox(height: 14),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: _level == 1 ? _directionButtons() : _intervalButtons(),
+      ),
+      if (_level > 1 && !_solved)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 14),
+          child: Text(
+            'Segure uma opção para ouvi-la antes de responder',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+        )
+      else
+        const SizedBox(height: 26),
+    ],
+  );
+
+  AnswerState _stateFor(int choice) {
+    final isAnswer = _level == 1
+        ? (choice > 0) == _ascending
+        : choice == _semitones;
+    if (_solved && isAnswer) return AnswerState.correct;
+    if (_wrong.contains(choice)) return AnswerState.wrong;
+    return AnswerState.normal;
+  }
+
+  Widget _directionButtons() => Row(
+    children: [
+      for (final choice in const [1, -1]) ...[
+        if (choice == -1) const SizedBox(width: 12),
+        Expanded(
+          child: AnswerPill(
+            label: choice > 0 ? 'Sobe' : 'Desce',
+            icon: choice > 0
+                ? Icons.arrow_upward_rounded
+                : Icons.arrow_downward_rounded,
+            height: 72,
+            minWidth: 0,
+            state: _stateFor(choice),
+            enabled: !_busy && !_solved,
+            shaking: _shaking == choice,
+            shakeToken: _shakeToken,
+            onTap: () => _answer(choice),
+            onLongPress: () => _preview(choice),
+          ),
+        ),
+      ],
+    ],
+  );
+
+  Widget _intervalButtons() => Wrap(
+    alignment: WrapAlignment.center,
+    spacing: 10,
+    runSpacing: 10,
+    children: [
+      for (final semitones in _options)
+        AnswerPill(
+          label: EarTrainingLevels.intervalName(semitones),
+          minWidth: _options.length > 6 ? 100.0 : 136.0,
+          state: _stateFor(semitones),
+          enabled: !_busy && !_solved,
+          shaking: _shaking == semitones,
+          shakeToken: _shakeToken,
+          onTap: () => _answer(semitones),
+          onLongPress: () => _preview(semitones),
+        ),
+    ],
+  );
 }
