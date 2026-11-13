@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_soloud/flutter_soloud.dart';
 
+import 'audio_engine.dart';
+
 /// Engine compartilhado para carregar os samples uma vez e reduzir atrasos
 /// entre as notas nos exercícios auditivos e no teclado.
 class MusicAudioService {
@@ -12,10 +14,13 @@ class MusicAudioService {
   final SoLoud _engine = SoLoud.instance;
   final Map<String, Future<AudioSource>> _loading = {};
   final Map<SoundHandle, AudioSource> _playing = {};
-  Future<void>? _initialization;
+  Future<void> initialize() => AudioEngine.ensureInitialized();
 
-  Future<void> initialize() {
-    return _initialization ??= _engine.init();
+  /// Toca um som curto inteiro, sem fade, no volume indicado (cliques do
+  /// metrônomo). Não espera o fim do som.
+  Future<void> playOneShot(String file, {double volume = 1}) async {
+    final source = await _source(file);
+    await _engine.play(source, volume: volume);
   }
 
   Future<void> preload(Iterable<String> files) async {

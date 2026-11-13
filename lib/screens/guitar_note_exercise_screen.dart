@@ -4,9 +4,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../services/app_preferences.dart';
-import '../services/note_player.dart';
+import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/guitar_sample_map.dart';
 import '../utils/note_names.dart';
 import '../utils/orientacao.dart';
 import '../widgets/guitar_fretboard.dart';
@@ -23,7 +24,7 @@ class GuitarNoteExerciseScreen extends StatefulWidget {
 class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
   static const _cordas = ['Mi aguda', 'Si', 'Sol', 'Ré', 'Lá', 'Mi grave'];
 
-  final _audio = NotePlayer.instance;
+  final _audio = MusicAudioService.instance;
   final _progresso = ProgressService();
   final _random = Random();
   final _cronometro = Stopwatch();
@@ -56,7 +57,9 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
   Future<void> _inicializar() async {
     try {
       _tipoNota = await AppPreferences.noteType();
-      await _audio.initialize();
+      // Todo o braço pode ser tocado para comparar, então todos os samples
+      // são carregados antes da primeira questão.
+      await _audio.preload(GuitarSampleMap.fretboardAssets);
       if (!mounted) return;
       setState(() => _carregando = false);
       await _novaQuestao();
@@ -76,7 +79,7 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
     final opcoes = <(int, int, int)>[];
     for (var corda = 0; corda < 6; corda++) {
       for (var casa = 0; casa <= 5; casa++) {
-        opcoes.add((corda, casa, standardGuitarOpenMidis[corda] + casa));
+        opcoes.add((corda, casa, GuitarSampleMap.openMidiNotes[corda] + casa));
       }
     }
     _alvo = opcoes[_random.nextInt(opcoes.length)];
@@ -96,10 +99,11 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
     _cronometro.stop();
     setState(() => _tocando = true);
     try {
-      await _audio.playNote(
-        alvo.$3,
-        instrument: NoteInstrument.guitar,
-        durationMs: 1600,
+      final sample = GuitarSampleMap.forPosition(alvo.$1, alvo.$2);
+      await _audio.playFor(
+        sample.file,
+        const Duration(milliseconds: 1600),
+        pitchRatio: sample.pitchRatio,
       );
     } catch (_) {
       if (mounted) {
@@ -125,10 +129,11 @@ class _GuitarNoteExerciseScreenState extends State<GuitarNoteExerciseScreen> {
       _posicaoSelecionada = (corda, casa);
     });
     try {
-      await _audio.playNote(
-        midi,
-        instrument: NoteInstrument.guitar,
-        durationMs: 900,
+      final sample = GuitarSampleMap.forPosition(corda, casa);
+      await _audio.playFor(
+        sample.file,
+        const Duration(milliseconds: 900),
+        pitchRatio: sample.pitchRatio,
       );
     } catch (_) {
       // A seleção continua válida mesmo se o som falhar.

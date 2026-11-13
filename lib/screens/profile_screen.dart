@@ -489,7 +489,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     child: const ListTile(
       leading: Icon(Icons.music_note, color: verde),
       title: Text('Sobre os sons'),
-      subtitle: Text('Piano e violão: síntese sonora sem samples.'),
+      subtitle: Text(
+        'Simuladores: samples Tone.js Instruments (CC BY 3.0). '
+        'Exercícios auditivos: som sintetizado no próprio app.',
+      ),
     ),
   );
 

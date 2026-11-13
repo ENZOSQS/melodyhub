@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter_soloud/flutter_soloud.dart';
 
+import 'audio_engine.dart';
+
 enum NoteInstrument { piano, guitar }
 
 const standardGuitarOpenMidis = [64, 59, 55, 50, 45, 40];
@@ -15,16 +17,14 @@ class NotePlayer {
 
   static const int _attackMs = 5;
   static const int _releaseMs = 300;
-  static const double _maxGain = 0.24;
+  static const double _maxGain = 0.55;
   final SoLoud _engine = SoLoud.instance;
   final Map<(int, NoteInstrument, int, WaveForm), Future<AudioSource>>
   _sources = {};
   final Set<SoundHandle> _playing = {};
   final Set<SoundHandle> _releasing = {};
   final Map<SoundHandle, double> _peakVolumes = {};
-  Future<void>? _initialization;
-
-  Future<void> initialize() => _initialization ??= _engine.init();
+  Future<void> initialize() => AudioEngine.ensureInitialized();
 
   Future<void> playNote(
     int midi, {
@@ -84,10 +84,11 @@ class NotePlayer {
     final partials = instrument == NoteInstrument.piano
         ? const [
             (1, WaveForm.sin, 1.0),
-            (2, WaveForm.sin, 0.35),
-            (3, WaveForm.sin, 0.12),
+            (2, WaveForm.sin, 0.55),
+            (3, WaveForm.sin, 0.25),
+            (4, WaveForm.sin, 0.10),
           ]
-        : const [(1, WaveForm.triangle, 1.0), (2, WaveForm.sin, 0.25)];
+        : const [(1, WaveForm.triangle, 1.0), (2, WaveForm.sin, 0.40)];
     final totalWeight = partials.fold<double>(
       0,
       (total, partial) => total + partial.$3,

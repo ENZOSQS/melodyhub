@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import '../services/note_player.dart';
+import '../utils/guitar_sample_map.dart';
 import '../utils/note_names.dart';
 
 /// Braço de violão reutilizável para simuladores e exercícios.
@@ -41,7 +41,7 @@ class _GuitarFretboardState extends State<GuitarFretboard> {
     widget.onPositionPressed(
       string,
       fret,
-      standardGuitarOpenMidis[string] + fret,
+      GuitarSampleMap.openMidiNotes[string] + fret,
     );
   }
 
@@ -79,7 +79,7 @@ class _GuitarFretboardState extends State<GuitarFretboard> {
                   painter: _FretboardPainter(
                     showNoteNames: widget.showNoteNames,
                     active: widget.activePosition,
-                    tuning: standardGuitarOpenMidis,
+                    tuning: GuitarSampleMap.openMidiNotes,
                     noteNames: List.generate(12, (i) => _nome(i)),
                   ),
                   size: Size(boardWidth, boardHeight),
@@ -170,10 +170,7 @@ class _FretboardPainter extends CustomPainter {
 
     // Sombra projetada do braço.
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        braco.shift(const Offset(0, 9)),
-        const Radius.circular(6),
-      ),
+      RRect.fromRectAndRadius(braco.shift(const Offset(0, 9)), const Radius.circular(6)),
       Paint()
         ..color = const Color(0xAA000000)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
@@ -186,13 +183,7 @@ class _FretboardPainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            _madeiraEscura,
-            _madeiraMedia,
-            _madeiraClara,
-            _madeiraMedia,
-            _madeiraEscura,
-          ],
+          colors: [_madeiraEscura, _madeiraMedia, _madeiraClara, _madeiraMedia, _madeiraEscura],
           stops: [0, .18, .5, .82, 1],
         ).createShader(braco),
     );
@@ -206,16 +197,8 @@ class _FretboardPainter extends CustomPainter {
     final filete = Paint()
       ..color = _filete
       ..strokeWidth = 2.2;
-    canvas.drawLine(
-      Offset(braco.left, braco.top + 1),
-      Offset(braco.right, braco.top + 1),
-      filete,
-    );
-    canvas.drawLine(
-      Offset(braco.left, braco.bottom - 1),
-      Offset(braco.right, braco.bottom - 1),
-      filete,
-    );
+    canvas.drawLine(Offset(braco.left, braco.top + 1), Offset(braco.right, braco.top + 1), filete);
+    canvas.drawLine(Offset(braco.left, braco.bottom - 1), Offset(braco.right, braco.bottom - 1), filete);
 
     _desenharMarcacoes(canvas, g);
     _desenharTrastes(canvas, g, braco);
@@ -227,18 +210,10 @@ class _FretboardPainter extends CustomPainter {
   }
 
   /// Borda do tampo e a boca do violão, à esquerda da pestana, como no mockup.
-  void _desenharCorpo(
-    Canvas canvas,
-    _FretboardGeometry g,
-    double topo,
-    double base,
-  ) {
+  void _desenharCorpo(Canvas canvas, _FretboardGeometry g, double topo, double base) {
     final centro = Offset(g.left - 6, (topo + base) / 2);
     final raio = (base - topo) * .95;
-    final tampo = Rect.fromCircle(
-      center: centro.translate(-raio * .55, 0),
-      radius: raio,
-    );
+    final tampo = Rect.fromCircle(center: centro.translate(-raio * .55, 0), radius: raio);
     canvas.save();
     canvas.clipRect(Rect.fromLTRB(0, topo - 30, g.left + 2, base + 30));
     canvas.drawOval(
@@ -258,11 +233,7 @@ class _FretboardPainter extends CustomPainter {
     );
     // Boca (furo) com roseta.
     final boca = Offset(tampo.center.dx + raio * .38, tampo.center.dy);
-    canvas.drawCircle(
-      boca,
-      raio * .3,
-      Paint()..color = const Color(0xFF120B07),
-    );
+    canvas.drawCircle(boca, raio * .3, Paint()..color = const Color(0xFF120B07));
     canvas.drawCircle(
       boca,
       raio * .34,
@@ -310,12 +281,7 @@ class _FretboardPainter extends CustomPainter {
     }
     // Brilho de verniz no meio da escala.
     canvas.drawRect(
-      Rect.fromLTRB(
-        braco.left,
-        braco.center.dy - braco.height * .22,
-        braco.right,
-        braco.center.dy + braco.height * .22,
-      ),
+      Rect.fromLTRB(braco.left, braco.center.dy - braco.height * .22, braco.right, braco.center.dy + braco.height * .22),
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
@@ -335,28 +301,17 @@ class _FretboardPainter extends CustomPainter {
     final distanciaDupla = (g.stringY(1) - g.stringY(0)) * .95;
     for (final fret in const [3, 5, 7, 9, 12]) {
       final x = _centroCasa(g, fret);
-      final ys = fret == 12
-          ? [meio - distanciaDupla, meio + distanciaDupla]
-          : [meio];
+      final ys = fret == 12 ? [meio - distanciaDupla, meio + distanciaDupla] : [meio];
       for (final y in ys) {
         final centro = Offset(x, y);
-        canvas.drawCircle(
-          centro.translate(0, 1.5),
-          9,
-          Paint()..color = const Color(0x66000000),
-        );
+        canvas.drawCircle(centro.translate(0, 1.5), 9, Paint()..color = const Color(0x66000000));
         canvas.drawCircle(
           centro,
           8.5,
           Paint()
             ..shader = const RadialGradient(
               center: Alignment(-.35, -.4),
-              colors: [
-                Color(0xFFFFFFFF),
-                Color(0xFFEDE6F2),
-                Color(0xFFD5E4EA),
-                Color(0xFFBFB5A6),
-              ],
+              colors: [Color(0xFFFFFFFF), Color(0xFFEDE6F2), Color(0xFFD5E4EA), Color(0xFFBFB5A6)],
               stops: [0, .45, .75, 1],
             ).createShader(Rect.fromCircle(center: centro, radius: 8.5)),
         );
@@ -377,12 +332,7 @@ class _FretboardPainter extends CustomPainter {
         traste,
         Paint()
           ..shader = const LinearGradient(
-            colors: [
-              Color(0xFF6E6A66),
-              Color(0xFFF5F2EC),
-              Color(0xFFB9B4AD),
-              Color(0xFF5D5955),
-            ],
+            colors: [Color(0xFF6E6A66), Color(0xFFF5F2EC), Color(0xFFB9B4AD), Color(0xFF5D5955)],
             stops: [0, .35, .65, 1],
           ).createShader(traste),
       );
@@ -391,16 +341,8 @@ class _FretboardPainter extends CustomPainter {
 
   /// Pestana de osso no início do braço.
   void _desenharPestana(Canvas canvas, _FretboardGeometry g, Rect braco) {
-    final pestana = Rect.fromLTRB(
-      g.left - 9,
-      braco.top - 2,
-      g.left + 3,
-      braco.bottom + 2,
-    );
-    canvas.drawRect(
-      pestana.shift(const Offset(3, 0)),
-      Paint()..color = const Color(0x77000000),
-    );
+    final pestana = Rect.fromLTRB(g.left - 9, braco.top - 2, g.left + 3, braco.bottom + 2);
+    canvas.drawRect(pestana.shift(const Offset(3, 0)), Paint()..color = const Color(0x77000000));
     canvas.drawRRect(
       RRect.fromRectAndRadius(pestana, const Radius.circular(2)),
       Paint()
@@ -454,12 +396,7 @@ class _FretboardPainter extends CustomPainter {
   }
 
   /// Números das casas no topo e nomes das cordas soltas à esquerda.
-  void _desenharRotulos(
-    Canvas canvas,
-    _FretboardGeometry g,
-    Size size,
-    double topo,
-  ) {
+  void _desenharRotulos(Canvas canvas, _FretboardGeometry g, Size size, double topo) {
     for (var fret = 0; fret <= 12; fret++) {
       final destaque = const [0, 3, 5, 7, 9, 12].contains(fret);
       _drawText(
@@ -521,11 +458,7 @@ class _FretboardPainter extends CustomPainter {
           canvas,
           texto,
           centro,
-          const TextStyle(
-            color: Color(0xFFFFE6BF),
-            fontSize: 9.5,
-            fontWeight: FontWeight.w700,
-          ),
+          const TextStyle(color: Color(0xFFFFE6BF), fontSize: 9.5, fontWeight: FontWeight.w700),
         );
       }
     }
