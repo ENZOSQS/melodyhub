@@ -400,3 +400,9 @@ no README como gerar a chave com `keytool`. **Não gere nem commite chaves.**
 - Decisões: mantida a licença CC BY 3.0 dos samples com atribuição em `docs/creditos-sons.md`; não houve publicação nem alteração das regras do Firestore. O APK foi compilado em release.
 - Pendências: capturas em aparelho/emulador não foram feitas porque só há dispositivos Windows/Chrome/Edge conectados e nenhum emulador Android disponível. A validação manual do áudio e das telas móveis continua pendente.
 - analyze/test: `flutter analyze` sem problemas; `flutter test` passou (51 testes).
+
+### Registro 14A — Motor de som sem samples
+- Arquivos: criado `lib/services/note_player.dart`; removidos `lib/utils/sample_map.dart`, `lib/utils/guitar_sample_map.dart` e os samples de piano e violão. Telas do teclado, exercícios, conceitos musicais e violão agora usam o sintetizador; permanecem no `MusicAudioService` apenas os WAVs do ritmo. Créditos e teste de assets atualizados.
+- Decisões: usado o plano B com ondas senoidal e triangular via `flutter_soloud`, afinação MIDI exata, ataque de 5 ms, liberação de 300 ms e ganho limitado. Não há SoundFont nem licença de áudio de terceiros; o pacote `flutter_soloud` usa MIT.
+- Pendências: nenhuma nesta parte.
+- analyze/test: `flutter analyze` sem problemas; `flutter test` passou (48 testes).

@@ -6,12 +6,11 @@ import '../domain/feedback_rules.dart';
 import '../domain/answer_feedback_rules.dart';
 import '../domain/ear_training_levels.dart';
 import '../data/theory_explanations.dart';
-import '../services/music_audio_service.dart';
+import '../services/note_player.dart';
 import '../services/progress_service.dart';
 import '../services/app_preferences.dart';
 import '../theme/app_theme.dart';
 import '../utils/note_names.dart';
-import '../utils/sample_map.dart';
 import '../widgets/mh_ui.dart';
 import '../widgets/piano_answer_keyboard.dart';
 import '../widgets/theory_explanation_sheet.dart';
@@ -34,10 +33,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   static const Duration _duracaoLenta = Duration(milliseconds: 620);
   static const Duration _pausaNormal = Duration(milliseconds: 55);
   static const Duration _pausaLenta = Duration(milliseconds: 150);
-  static final _notes = List.generate(
-    13,
-    (index) => (index, SampleMap.piano(48 + index)),
-  );
+  static final _notes = List.generate(13, (index) => (index, 48 + index));
   static const _intervalNames = [
     '',
     'Segunda menor',
@@ -54,7 +50,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     'Oitava justa',
   ];
 
-  final _audio = MusicAudioService.instance;
+  final _notePlayer = NotePlayer.instance;
   final _progress = ProgressService();
   final _random = Random();
   final _timer = Stopwatch();
@@ -84,8 +80,8 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   NivelApoio? _apoioResposta;
   late int _degree;
   late bool _ascending;
-  late (int, MappedSample) _firstNote;
-  late (int, MappedSample) _secondNote;
+  late (int, int) _firstNote;
+  late (int, int) _secondNote;
   String _tipoNota = 'solfejo';
 
   Duration get _noteDuration => _slowAudio ? _duracaoLenta : _duracaoNormal;
@@ -137,7 +133,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     _inForeground = state == AppLifecycleState.resumed;
     if (!_inForeground) {
       _timer.stop();
-      _audio.stopAll();
+      _notePlayer.stopAll();
     } else if (!_loading && _selected == null && !_playing) {
       _playPair();
     }
@@ -158,7 +154,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       final stage = Map<String, dynamic>.from(
         stages['$level'] as Map? ?? const <String, dynamic>{},
       );
-      await _audio.preload(_notes.map((note) => note.$2.file));
+      await _notePlayer.initialize();
       if (!mounted) return;
       setState(() {
         _tipoNota = tipoNota;
@@ -206,10 +202,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     try {
       for (final note in [_firstNote, _secondNote]) {
         if (!_inForeground) return;
-        await _audio.playFor(
-          note.$2.file,
-          _noteDuration,
-          pitchRatio: note.$2.pitchRatio,
+        await _notePlayer.playNote(
+          note.$2,
+          durationMs: _noteDuration.inMilliseconds,
         );
         await Future<void>.delayed(_noteGap);
       }
@@ -231,7 +226,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     }
   }
 
-  int _midiOf((int, MappedSample) note) => 48 + note.$1;
+  int _midiOf((int, int) note) => note.$2;
 
   String _noteName(int midi) => nomeNota(midi, _tipoNota);
 
@@ -240,12 +235,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     _timer.stop();
     setState(() => _playing = true);
     try {
-      final sample = SampleMap.piano(midi);
-      await _audio.playFor(
-        sample.file,
-        const Duration(milliseconds: 620),
-        pitchRatio: sample.pitchRatio,
-      );
+      await _notePlayer.playNote(midi, durationMs: 620);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -314,12 +304,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     setState(() => _playing = true);
     try {
       for (final midi in [firstMidi, secondMidi]) {
-        final sample = SampleMap.piano(midi);
-        await _audio.playFor(
-          sample.file,
-          const Duration(milliseconds: 700),
-          pitchRatio: sample.pitchRatio,
-        );
+        await _notePlayer.playNote(midi, durationMs: 700);
         await Future<void>.delayed(const Duration(milliseconds: 180));
       }
     } catch (_) {
@@ -473,18 +458,14 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     if (!_inForeground) return;
     setState(() => _playing = true);
     try {
-      final initial = SampleMap.piano(_midiOf(_firstNote));
-      final target = SampleMap.piano(_midiOf(_secondNote));
-      await _audio.playFor(
-        initial.file,
-        _noteDuration,
-        pitchRatio: initial.pitchRatio,
+      await _notePlayer.playNote(
+        _midiOf(_firstNote),
+        durationMs: _noteDuration.inMilliseconds,
       );
       await Future<void>.delayed(_noteGap);
-      await _audio.playFor(
-        target.file,
-        _noteDuration,
-        pitchRatio: target.pitchRatio,
+      await _notePlayer.playNote(
+        _midiOf(_secondNote),
+        durationMs: _noteDuration.inMilliseconds,
       );
     } catch (_) {
       if (mounted) {
@@ -505,16 +486,10 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     if (_playing || _saving) return;
     setState(() => _playing = true);
     try {
-      final notes = [
-        SampleMap.piano(_midiOf(_firstNote)),
-        SampleMap.piano(_midiOf(_secondNote)),
-      ];
-      final handles = await Future.wait([
-        for (var i = 0; i < notes.length; i++)
-          _audio.startPianoNote(notes[i].file, pitchRatio: notes[i].pitchRatio),
-      ]);
-      await Future<void>.delayed(const Duration(milliseconds: 850));
-      await Future.wait(handles.map(_audio.stopPianoNote));
+      await _notePlayer.playChord([
+        _midiOf(_firstNote),
+        _midiOf(_secondNote),
+      ], durationMs: 850);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -535,12 +510,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     setState(() => _playing = true);
     try {
       for (final midi in [48, 48 + _degree]) {
-        final sample = SampleMap.piano(midi);
-        await _audio.playFor(
-          sample.file,
-          const Duration(milliseconds: 750),
-          pitchRatio: sample.pitchRatio,
-        );
+        await _notePlayer.playNote(midi, durationMs: 750);
         await Future<void>.delayed(const Duration(milliseconds: 200));
       }
     } catch (_) {

@@ -489,9 +489,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     child: const ListTile(
       leading: Icon(Icons.music_note, color: verde),
       title: Text('Sobre os sons'),
-      subtitle: Text(
-        'Piano e violão: Tone.js Instruments (samples CC BY 3.0).',
-      ),
+      subtitle: Text('Piano e violão: síntese sonora sem samples.'),
     ),
   );
 

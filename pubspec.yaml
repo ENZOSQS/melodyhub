@@ -35,6 +35,4 @@ flutter:
 
   assets:
     - assets/sounds/
-    - assets/sounds/guitar/
-    - assets/sounds/piano/
     - assets/icons/music/

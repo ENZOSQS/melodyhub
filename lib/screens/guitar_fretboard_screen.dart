@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../services/music_audio_service.dart';
+import '../services/note_player.dart';
 import '../services/app_preferences.dart';
 import '../theme/app_theme.dart';
-import '../utils/guitar_sample_map.dart';
 import '../utils/note_names.dart';
 import '../utils/orientacao.dart';
 import '../widgets/guitar_fretboard.dart';
@@ -17,8 +16,8 @@ class GuitarFretboardScreen extends StatefulWidget {
 }
 
 class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
-  static const _tuning = GuitarSampleMap.openMidiNotes;
-  final _audio = MusicAudioService.instance;
+  static const _tuning = standardGuitarOpenMidis;
+  final _audio = NotePlayer.instance;
   int? _lastMidi;
   (int, int)? _lastPosition;
   bool _loading = true;
@@ -45,9 +44,9 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
       _tipoNota = 'solfejo';
     }
     try {
-      await _audio.preload([...GuitarSampleMap.fretboardAssets]);
+      await _audio.initialize();
     } catch (error) {
-      debugPrint('Não foi possível carregar os samples de violão: $error');
+      debugPrint('Não foi possível inicializar o sintetizador: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -66,11 +65,10 @@ class _GuitarFretboardScreenState extends State<GuitarFretboardScreen> {
       _lastPosition = (string, fret);
     });
     try {
-      final sample = GuitarSampleMap.forPosition(string, fret);
-      await _audio.playFor(
-        sample.file,
-        const Duration(milliseconds: 1900),
-        pitchRatio: sample.pitchRatio,
+      await _audio.playNote(
+        _tuning[string] + fret,
+        instrument: NoteInstrument.guitar,
+        durationMs: 1900,
       );
     } catch (_) {
       if (mounted) {

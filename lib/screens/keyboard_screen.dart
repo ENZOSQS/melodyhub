@@ -8,10 +8,9 @@ import 'package:flutter_piano_pro/flutter_piano_pro.dart';
 import 'package:flutter_piano_pro/note_names.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
-import '../services/music_audio_service.dart';
+import '../services/note_player.dart';
 import '../services/app_preferences.dart';
 import '../utils/note_names.dart';
-import '../utils/sample_map.dart';
 import '../widgets/keyboard_octave_selector.dart';
 
 class KeyboardScreen extends StatefulWidget {
@@ -56,12 +55,12 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   static const _accent = Color(0xFFE9B96E);
   static const _pressedKey = Color(0xFFE9B96E);
 
-  final MusicAudioService _audio = MusicAudioService.instance;
+  final NotePlayer _audio = NotePlayer.instance;
   final Map<int, int> _activeNotes = {};
-  final Map<int, SoundHandle> _activeHandles = {};
+  final Map<int, List<SoundHandle>> _activeHandles = {};
   final Map<int, Duration> _noteStartTimes = {};
   final Map<LogicalKeyboardKey, int> _physicalPointers = {};
-  final Set<SoundHandle> _sustainedHandles = {};
+  final Set<List<SoundHandle>> _sustainedHandles = {};
   final List<_RecordedNote> _recordedNotes = [];
   final Stopwatch _recordClock = Stopwatch();
   final ScrollController _pianoScrollController = ScrollController();
@@ -98,7 +97,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
     final defaultOctaveCount = MediaQuery.sizeOf(context).width >= 1000 ? 2 : 1;
     try {
       final values = await Future.wait([
-        _audio.preload(SampleMap.pianoAssets),
+        _audio.initialize(),
         AppPreferences.showKeyboardLabels(),
         AppPreferences.noteType(),
         AppPreferences.keyboardOctaveCount(),
@@ -187,15 +186,11 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
     });
 
     try {
-      final sample = SampleMap.piano(midi);
-      final handle = await _audio.startPianoNote(
-        sample.file,
-        pitchRatio: sample.pitchRatio,
-      );
+      final handles = await _audio.startNote(midi);
       if (_activeNotes[pointer] == midi) {
-        _activeHandles[pointer] = handle;
+        _activeHandles[pointer] = handles;
       } else {
-        await _audio.stopPianoNote(handle);
+        await _audio.stopNote(handles);
       }
     } catch (error) {
       debugPrint('Falha ao tocar nota MIDI $midi: $error');
@@ -222,7 +217,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
       if (_sustainEnabled) {
         _sustainedHandles.add(handle);
       } else {
-        unawaited(_audio.stopPianoNote(handle));
+        unawaited(_audio.stopNote(handle));
       }
     }
     if (mounted) setState(() {});
@@ -243,7 +238,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
     final handles = _sustainedHandles.toList();
     _sustainedHandles.clear();
     for (final handle in handles) {
-      unawaited(_audio.stopPianoNote(handle));
+      unawaited(_audio.stopNote(handle));
     }
   }
 
@@ -299,17 +294,13 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
           final wait = note.start - clock.elapsed;
           if (wait > Duration.zero) await Future<void>.delayed(wait);
           if (!mounted || token != _playbackToken) return;
-          final sample = SampleMap.piano(note.midi);
-          final handle = await _audio.startPianoNote(
-            sample.file,
-            pitchRatio: sample.pitchRatio,
-          );
+          final handle = await _audio.startNote(note.midi);
           try {
             if (note.duration > Duration.zero) {
               await Future<void>.delayed(note.duration);
             }
           } finally {
-            await _audio.stopPianoNote(handle);
+            await _audio.stopNote(handle);
           }
         }),
       );

@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_soloud/flutter_soloud.dart';
 
 import '../services/app_preferences.dart';
-import '../services/music_audio_service.dart';
+import '../services/note_player.dart';
 import '../services/progress_service.dart';
 import '../utils/note_names.dart';
-import '../utils/sample_map.dart';
 import '../widgets/piano_answer_keyboard.dart';
 import '../data/theory_explanations.dart';
 import '../widgets/theory_explanation_sheet.dart';
@@ -39,7 +37,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
 
   final _random = Random();
   final _progress = ProgressService();
-  final _audio = MusicAudioService.instance;
+  final _notePlayer = NotePlayer.instance;
   int _level = 1;
   int _root = 0;
   bool _loading = true;
@@ -81,7 +79,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       ? 'Reconhecer escalas'
       : 'Reconhecer acordes';
   String get _noteName => nomeNota(_root, _noteType ?? 'solfejo');
-  MappedSample _sample(int semitone) => SampleMap.piano(48 + _root + semitone);
+  int _midi(int semitone) => 48 + _root + semitone;
 
   @override
   void initState() {
@@ -98,7 +96,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       final skill = Map<String, dynamic>.from(skills[_skill] as Map? ?? {});
       _level = (skill['nivel'] as num?)?.toInt().clamp(1, 5) ?? 1;
       _noteType = await AppPreferences.noteType();
-      await _audio.preload(SampleMap.pianoAssets);
+      await _notePlayer.initialize();
     } catch (_) {
       _noteType = 'solfejo';
     }
@@ -124,26 +122,14 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       final intervals = _options[_answer]!;
       if (widget.exercise == ConceptExercise.scale) {
         for (final semitone in intervals) {
-          final sample = _sample(semitone);
-          await _audio.playFor(
-            sample.file,
-            const Duration(milliseconds: 280),
-            pitchRatio: sample.pitchRatio,
-          );
+          await _notePlayer.playNote(_midi(semitone), durationMs: 280);
           await Future<void>.delayed(const Duration(milliseconds: 55));
         }
       } else {
-        final handles = await Future.wait<SoundHandle>(
-          intervals.map((i) {
-            final sample = _sample(i);
-            return _audio.startPianoNote(
-              sample.file,
-              pitchRatio: sample.pitchRatio,
-            );
-          }),
+        await _notePlayer.playChord(
+          intervals.map(_midi).toList(),
+          durationMs: 850,
         );
-        await Future<void>.delayed(const Duration(milliseconds: 850));
-        await Future.wait(handles.map(_audio.stopPianoNote));
       }
     } catch (_) {
       if (mounted) {
@@ -217,12 +203,7 @@ class _MusicConceptsScreenState extends State<MusicConceptsScreen> {
       }
     });
     try {
-      final sample = SampleMap.piano(midi);
-      await _audio.playFor(
-        sample.file,
-        const Duration(milliseconds: 520),
-        pitchRatio: sample.pitchRatio,
-      );
+      await _notePlayer.playNote(midi, durationMs: 520);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
