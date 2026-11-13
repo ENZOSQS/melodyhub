@@ -3,13 +3,16 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../services/app_preferences.dart';
+import '../data/theory_explanations.dart';
+import '../domain/tempo_rules.dart';
 import '../services/music_audio_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
-import '../data/theory_explanations.dart';
+import '../widgets/exercise_ui.dart';
 import '../widgets/theory_explanation_sheet.dart';
 
+/// Andamento (BPM): ouvir o andamento, ajustar o número, ouvir o próprio
+/// andamento para comparar quantas vezes quiser e só então confirmar.
 class RhythmExerciseScreen extends StatefulWidget {
   const RhythmExerciseScreen({super.key});
 
@@ -17,43 +20,41 @@ class RhythmExerciseScreen extends StatefulWidget {
   State<RhythmExerciseScreen> createState() => _RhythmExerciseScreenState();
 }
 
+enum _Playing { none, target, guess }
+
 class _RhythmExerciseScreenState extends State<RhythmExerciseScreen>
     with WidgetsBindingObserver {
-  static const _background = AppColors.background;
-  static const _accent = AppColors.primary;
-  static const _downbeatSound = 'metronome_downbeat.wav';
-  static const _beatSound = 'metronome_beat.wav';
-  static const _rhythmSound = 'rhythm_note.wav';
-  static const _patterns = <List<double>>[
-    [0, 1, 2, 3],
-    [0, 1.5, 2, 3.5],
-    [0, 0.5, 1.5, 2.5, 3],
-    [0, 1, 2.5, 3],
-    [0, 0.5, 1, 2.5, 3.5],
-  ];
+  static const _downbeat = 'metronome_downbeat.wav';
+  static const _beat = 'metronome_beat.wav';
+  static const _theory = TheoryExplanation(
+    objective: 'Perceber a velocidade de uma música, o andamento.',
+    theory:
+        'BPM quer dizer batidas por minuto. 60 BPM é uma batida por segundo; '
+        '120 BPM são duas por segundo. Ouça o andamento, ajuste o número e '
+        'compare os dois até soarem iguais. Bater o pé junto ajuda a sentir o pulso.',
+  );
 
   final _progress = ProgressService();
   final _audio = MusicAudioService.instance;
   final _random = Random();
-  final _clock = Stopwatch();
-  final List<int> _tapTimesMs = [];
-  Timer? _timer;
+  final _timer = Stopwatch();
 
   int _level = 1;
-  int _attempts = 0;
-  int _bpm = 80;
+  int _roundDone = 0;
+  int _sessionQuestions = 0;
+  int _sessionCorrect = 0;
+  int _sessionStars = 0;
+  int _target = 90;
+  int _guess = 110;
   int _pulse = -1;
+  int _playToken = 0;
+  _Playing _playing = _Playing.none;
   bool _loading = true;
-  bool _playing = false;
-  bool _recording = false;
   bool _saving = false;
-  bool _showHint = false;
-  double? _averageErrorMs;
-  bool? _correct;
-  late List<double> _target;
-  late int _patternIndex;
-
-  Duration get _beat => Duration(milliseconds: (60000 / _bpm).round());
+  bool _inForeground = true;
+  bool _heardTarget = false;
+  TempoResult? _result;
+  String? _error;
 
   @override
   void initState() {
@@ -64,22 +65,20 @@ class _RhythmExerciseScreenState extends State<RhythmExerciseScreen>
 
   @override
   void dispose() {
+    _playToken++;
     WidgetsBinding.instance.removeObserver(this);
-    _timer?.cancel();
-    _clock.stop();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
-      _timer?.cancel();
-      _clock.stop();
-      _audio.stopAll();
-      if (mounted && (_playing || _recording)) {
+    _inForeground = state == AppLifecycleState.resumed;
+    if (!_inForeground) {
+      _playToken++;
+      if (mounted) {
         setState(() {
-          _playing = false;
-          _recording = false;
+          _playing = _Playing.none;
+          _pulse = -1;
         });
       }
     }
@@ -87,503 +86,414 @@ class _RhythmExerciseScreenState extends State<RhythmExerciseScreen>
 
   Future<void> _initialize() async {
     try {
-      final results = await Future.wait([
+      final values = await Future.wait([
         _progress.buscarProgresso(),
-        AppPreferences.defaultBpm(),
+        _audio.preload(const [_downbeat, _beat]),
       ]);
-      final data = results.first as Map<String, dynamic>;
-      final preferences = Map<String, dynamic>.from(
-        data['habilidadesEtapas'] as Map? ?? const <String, dynamic>{},
-      );
-      final rhythm = Map<String, dynamic>.from(
-        preferences['ritmo'] as Map? ?? const <String, dynamic>{},
-      );
-      _level = _number(rhythm['nivel']).clamp(1, 5).toInt();
-      _attempts = _number(
-        Map<String, dynamic>.from(
-          rhythm['$_level'] as Map? ?? const <String, dynamic>{},
-        )['rodadaTentativas'],
-      );
-      _bpm = results.last as int;
-      _newPattern();
-      if (mounted) setState(() => _loading = false);
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      final data = values[0] as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _applyProgress(data);
+        _newQuestion();
+        _loading = false;
+      });
+    } catch (error) {
+      debugPrint('Falha ao iniciar o exercício de BPM: $error');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Não foi possível carregar o exercício. Confira a conexão.';
+      });
     }
   }
 
-  void _newPattern() {
-    final available = min(_level, _patterns.length);
-    _patternIndex = _random.nextInt(available);
-    _target = List<double>.from(_patterns[_patternIndex]);
+  void _applyProgress(Map<String, dynamic> data) {
+    final skills = Map<String, dynamic>.from(
+      data['habilidadesEtapas'] as Map? ?? const <String, dynamic>{},
+    );
+    final rhythm = Map<String, dynamic>.from(
+      skills['ritmo'] as Map? ?? const <String, dynamic>{},
+    );
+    _level = _number(rhythm['nivel']).clamp(1, 5).toInt();
+    final stage = Map<String, dynamic>.from(
+      rhythm['$_level'] as Map? ?? const <String, dynamic>{},
+    );
+    _roundDone = _number(stage['rodadaTentativas']);
   }
 
-  Future<void> _listen() async {
-    if (_playing || _recording || _saving) return;
+  void _newQuestion() {
+    final range = TempoRules.bpmRange(_level);
+    _target = range.min + _random.nextInt(range.max - range.min + 1);
+    final offset = (12 + _random.nextInt(18)) * (_random.nextBool() ? 1 : -1);
+    _guess = TempoRules.startingGuess(_target, offset);
+    _result = null;
+    _heardTarget = false;
+    _timer
+      ..stop()
+      ..reset();
+  }
+
+  /// Toca 4 tempos (o 1º acentuado) e acende um ponto em cada tempo.
+  Future<void> _playBeats(int bpm, _Playing which) async {
+    if (!mounted) return;
+    final token = ++_playToken;
     setState(() {
-      _playing = true;
+      _playing = which;
       _pulse = -1;
     });
+    final beatMs = TempoRules.beatMs(bpm);
+    final clock = Stopwatch()..start();
     try {
-      await _audio.preload([_downbeatSound, _beatSound, _rhythmSound]);
-      final clock = Stopwatch()..start();
-      for (var halfBeat = 0; halfBeat < 8; halfBeat++) {
-        if (!mounted) return;
-        if (halfBeat.isEven) {
-          final beat = halfBeat ~/ 2;
-          setState(() => _pulse = beat);
-          unawaited(
-            _audio.playFor(
-              beat == 0 ? _downbeatSound : _beatSound,
-              const Duration(milliseconds: 70),
-            ),
-          );
-        }
-        if (_target.any((value) => (value - halfBeat / 2).abs() < 0.01)) {
-          unawaited(
-            _audio.playFor(_rhythmSound, const Duration(milliseconds: 85)),
-          );
-        }
-        final nextTick = Duration(
-          milliseconds: (_beat.inMilliseconds * (halfBeat + 1) / 2).round(),
-        );
-        final remaining = nextTick - clock.elapsed;
+      for (var beat = 0; beat < 4; beat++) {
+        if (!mounted || token != _playToken || !_inForeground) return;
+        setState(() => _pulse = beat);
+        unawaited(_audio.playOneShot(beat == 0 ? _downbeat : _beat));
+        final remaining =
+            Duration(milliseconds: beatMs * (beat + 1)) - clock.elapsed;
         if (remaining > Duration.zero) await Future<void>.delayed(remaining);
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Falha ao tocar o metrônomo: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Não foi possível tocar o ritmo. Confira o volume e toque em Ouvir o ritmo novamente.',
+              'Não foi possível tocar as batidas. Aumente o volume e tente de novo.',
             ),
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _playing = false);
-    }
-  }
-
-  Future<void> _startRecording() async {
-    if (_playing || _recording || _saving) return;
-    setState(() {
-      _playing = true;
-      _pulse = -1;
-      _tapTimesMs.clear();
-      _averageErrorMs = null;
-      _correct = null;
-    });
-    try {
-      await _audio.preload([_downbeatSound, _beatSound]);
-      // Four audible count-in beats give the learner a stable tempo anchor.
-      final countInClock = Stopwatch()..start();
-      for (var beat = 0; beat < 4; beat++) {
-        if (!mounted) return;
-        setState(() => _pulse = beat);
-        unawaited(
-          _audio.playFor(
-            beat == 0 ? _downbeatSound : _beatSound,
-            const Duration(milliseconds: 70),
-          ),
-        );
-        final nextTick = Duration(
-          milliseconds: _beat.inMilliseconds * (beat + 1),
-        );
-        final remaining = nextTick - countInClock.elapsed;
-        if (remaining > Duration.zero) await Future<void>.delayed(remaining);
-      }
-      if (!mounted) return;
-      _clock
-        ..reset()
-        ..start();
-      setState(() {
-        _playing = false;
-        _recording = true;
-        _pulse = 0;
-      });
-      var lastPulse = 0;
-      _timer = Timer.periodic(const Duration(milliseconds: 12), (timer) {
-        if (!mounted || !_recording) {
-          timer.cancel();
-          return;
-        }
-        final elapsed = _clock.elapsedMilliseconds;
-        final beatIndex = (elapsed / _beat.inMilliseconds).floor();
-        if (beatIndex != lastPulse && beatIndex < 4) {
-          lastPulse = beatIndex;
-          setState(() => _pulse = beatIndex);
-          unawaited(
-            _audio.playFor(_beatSound, const Duration(milliseconds: 70)),
-          );
-        }
-        if (elapsed >= _beat.inMilliseconds * 4 + _beat.inMilliseconds ~/ 2) {
-          timer.cancel();
-          _clock.stop();
-          setState(() => _recording = false);
-          unawaited(_finishRecording());
-        }
-      });
-    } catch (_) {
-      if (mounted) {
+      if (mounted && token == _playToken) {
         setState(() {
-          _playing = false;
-          _recording = false;
+          _playing = _Playing.none;
+          _pulse = -1;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível iniciar o exercício.'),
-          ),
-        );
       }
     }
   }
 
-  void _tap() {
-    if (!_recording) return;
-    setState(() => _tapTimesMs.add(_clock.elapsedMilliseconds));
+  Future<void> _listenTarget() async {
+    if (_playing != _Playing.none || _saving) return;
+    _heardTarget = true;
+    _timer.start();
+    await _playBeats(_target, _Playing.target);
   }
 
-  Future<void> _finishRecording() async {
-    final expected = _target
-        .map((halfBeat) => (halfBeat * _beat.inMilliseconds / 2).round())
-        .toList();
-    final count = max(expected.length, _tapTimesMs.length);
-    var totalError = 0.0;
-    for (var index = 0; index < count; index++) {
-      if (index >= expected.length || index >= _tapTimesMs.length) {
-        totalError += _beat.inMilliseconds * 0.5;
-      } else {
-        totalError += (_tapTimesMs[index] - expected[index]).abs();
-      }
-    }
-    final average = count == 0
-        ? _beat.inMilliseconds.toDouble()
-        : totalError / count;
-    final tolerance = max(135, _beat.inMilliseconds * 0.22);
-    final correct =
-        _tapTimesMs.length == expected.length && average <= tolerance;
+  Future<void> _listenGuess() async {
+    if (_playing != _Playing.none || _saving) return;
+    await _playBeats(_guess, _Playing.guess);
+  }
+
+  void _change(int delta) {
+    if (_result != null) return;
+    setState(() => _guess = TempoRules.clampBpm(_guess + delta));
+  }
+
+  Future<void> _confirm() async {
+    if (_playing != _Playing.none || _saving || _result != null) return;
+    _timer.stop();
+    final result = TempoRules.evaluate(
+      level: _level,
+      target: _target,
+      guess: _guess,
+    );
     setState(() {
-      _averageErrorMs = average;
-      _correct = correct;
+      _result = result;
       _saving = true;
     });
-
     try {
       await _progress.registrarExercicio(
-        acertou: correct,
+        acertou: result.correct,
         tipo: 'Ritmo',
-        pergunta: 'Reproduza o padrão rítmico do nível $_level em $_bpm BPM.',
-        resposta:
-            '${_tapTimesMs.length} batidas; erro médio ${average.round()} ms',
-        respostaCorreta: '${expected.length} batidas no padrão ouvido',
+        pergunta: 'Qual é o andamento (BPM) que você ouviu?',
+        resposta: '${result.guess} BPM',
+        respostaCorreta: '${result.target} BPM',
         dificuldade: _level,
-        questaoId: 'ritmo_${_level}_$_patternIndex',
-        categoria: 'Ditado rítmico',
-        duracaoMilissegundos: _clock.elapsedMilliseconds,
+        questaoId: 'bpm_nivel_$_level',
+        categoria: 'Andamento (BPM)',
+        itemAvaliado: 'bpm_nivel$_level',
+        duracaoSegundos: (_timer.elapsedMilliseconds / 1000).ceil(),
+        duracaoMilissegundos: _timer.elapsedMilliseconds,
+        tentativas: 1,
+        estrelas: result.stars,
       );
       final data = await _progress.buscarProgresso();
-      final skills = Map<String, dynamic>.from(
-        data['habilidadesEtapas'] as Map? ?? const <String, dynamic>{},
+      if (!mounted) return;
+      setState(() {
+        _applyProgress(data);
+        _sessionQuestions++;
+        _sessionStars += result.stars;
+        if (result.correct) _sessionCorrect++;
+        _saving = false;
+      });
+      // Toca o original e o do aluno em sequência, para comparar.
+      await _playBeats(_target, _Playing.target);
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      if (mounted) await _playBeats(_guess, _Playing.guess);
+    } catch (error) {
+      debugPrint('Falha ao salvar o BPM: $error');
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _result = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível salvar sua resposta. Confira a conexão e confirme de novo.',
+          ),
+        ),
       );
-      final rhythm = Map<String, dynamic>.from(
-        skills['ritmo'] as Map? ?? const <String, dynamic>{},
-      );
-      final level = _number(rhythm['nivel']).clamp(1, 5).toInt();
-      final stage = Map<String, dynamic>.from(
-        rhythm['$level'] as Map? ?? const <String, dynamic>{},
-      );
-      if (mounted) {
-        setState(() {
-          _level = level;
-          _attempts = _number(stage['rodadaTentativas']);
-          _saving = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível salvar o resultado.')),
-        );
-      }
     }
   }
 
   Future<void> _next() async {
+    _playToken++;
+    if (_sessionQuestions >= 10) {
+      final again = await showRoundSummary(
+        context,
+        stars: _sessionStars,
+        correct: _sessionCorrect,
+        total: _sessionQuestions,
+      );
+      if (!mounted) return;
+      if (again != true) {
+        Navigator.pop(context);
+        return;
+      }
+      _sessionQuestions = 0;
+      _sessionCorrect = 0;
+      _sessionStars = 0;
+    }
     setState(() {
-      _showHint = false;
-      _averageErrorMs = null;
-      _correct = null;
-      _newPattern();
+      _playing = _Playing.none;
+      _pulse = -1;
+      _newQuestion();
     });
-    await _listen();
   }
 
-  Future<void> _changeBpm(int value) async {
-    final bpm = value.clamp(40, 180);
-    await AppPreferences.setDefaultBpm(bpm);
-    if (mounted) setState(() => _bpm = bpm);
-  }
+  Future<void> _openTheory() => showTheoryExplanationSheet(
+    context,
+    explanation: _theory,
+    theory: _theory.theory,
+  );
+
+  int _number(dynamic value) => value is num ? value.toInt() : 0;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _background,
-      appBar: AppBar(
-        backgroundColor: _background,
-        foregroundColor: Colors.white,
-        title: const Text('Ditado rítmico'),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _accent))
-          : SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.all(18),
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.background,
+    appBar: AppBar(
+      title: const Text('Andamento (BPM)'),
+      actions: [
+        IconButton(
+          tooltip: 'Entenda a teoria',
+          onPressed: _openTheory,
+          icon: const Icon(Icons.menu_book_outlined),
+        ),
+      ],
+    ),
+    body: _loading
+        ? const Center(child: CircularProgressIndicator())
+        : _error != null
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _panel(
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.graphic_eq,
-                          color: _background,
-                          size: 40,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Nível $_level · ${_levelName(_level)}',
-                          style: const TextStyle(
-                            color: _background,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          _instruction,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.black54),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.slow_motion_video,
-                              color: _background,
-                            ),
-                            const Text(
-                              'BPM',
-                              style: TextStyle(
-                                color: _background,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Expanded(
-                              child: Slider(
-                                value: _bpm.toDouble(),
-                                min: 40,
-                                max: 180,
-                                divisions: 28,
-                                label: '$_bpm',
-                                onChanged: _playing || _recording
-                                    ? null
-                                    : (value) => _changeBpm(value.round()),
-                              ),
-                            ),
-                            Text(
-                              '$_bpm',
-                              style: const TextStyle(
-                                color: _background,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '$_attempts/10 tentativas · 7 acertos liberam a próxima fase',
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                  Text(_error!, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () {
+                      setState(() {
+                        _loading = true;
+                        _error = null;
+                      });
+                      _initialize();
+                    },
+                    child: const Text('Tentar novamente'),
                   ),
-                  const SizedBox(height: 18),
-                  GestureDetector(
-                    onTap: _recording ? _tap : null,
-                    behavior: HitTestBehavior.opaque,
-                    child: _beatDisplay(),
-                  ),
-                  if (_recording)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Toque no pulso para reproduzir o ritmo',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  if (_averageErrorMs == null) ...[
-                    OutlinedButton.icon(
-                      onPressed: _playing || _recording || _saving
-                          ? null
-                          : _listen,
-                      icon: const Icon(Icons.volume_up),
-                      label: const Text('Ouvir o ritmo'),
-                    ),
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
-                      onPressed: _playing || _recording || _saving
-                          ? null
-                          : _startRecording,
-                      icon: const Icon(Icons.mic_none),
-                      label: Text(
-                        _playing ? 'Prepare-se…' : 'Repetir com batidas',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () =>
-                              setState(() => _showHint = !_showHint),
-                          icon: const Icon(Icons.lightbulb_outline),
-                          label: Text(
-                            _showHint ? 'Ocultar dica' : 'Preciso de uma dica',
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _openTheory,
-                          icon: const Icon(Icons.menu_book),
-                          label: const Text('Entenda a teoria'),
-                        ),
-                      ],
-                    ),
-                    if (_showHint) _hintCard,
-                  ] else ...[
-                    _resultCard,
-                    if (_saving)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(14),
-                          child: CircularProgressIndicator(color: _accent),
-                        ),
-                      )
-                    else
-                      FilledButton.icon(
-                        onPressed: _next,
-                        icon: const Icon(Icons.arrow_forward),
-                        label: const Text('Próximo ritmo'),
-                      ),
-                  ],
                 ],
               ),
             ),
-    );
-  }
-
-  Widget _beatDisplay() => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    children: List.generate(4, (index) {
-      final active = _pulse == index;
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 110),
-        width: active ? 56 : 46,
-        height: active ? 56 : 46,
-        decoration: BoxDecoration(
-          color: active ? _accent : Colors.white12,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: Text(
-            '${index + 1}',
-            style: TextStyle(
-              color: active ? _background : Colors.white70,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+          )
+        : SafeArea(
+            child: Column(
+              children: [
+                ExerciseStatusBar(
+                  level: _level,
+                  roundDone: _roundDone,
+                  stars: _sessionStars,
+                ),
+                const ExerciseQuestion('Ajuste o BPM até ficar igual'),
+                const SizedBox(height: 18),
+                _pulseDots(),
+                Expanded(child: Center(child: _bpmControl())),
+                if (_result != null) _resultView() else const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                  child: _actions(),
+                ),
+              ],
             ),
           ),
+  );
+
+  Widget _pulseDots() => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: List.generate(4, (index) {
+      final active = _pulse == index;
+      final color = _playing == _Playing.guess
+          ? AppColors.secondary
+          : AppColors.primary;
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 90),
+        margin: const EdgeInsets.symmetric(horizontal: 9),
+        width: active ? 26 : 16,
+        height: active ? 26 : 16,
+        decoration: BoxDecoration(
+          color: active ? color : AppColors.surfaceRaised,
+          shape: BoxShape.circle,
         ),
       );
     }),
   );
 
-  Widget get _hintCard => _learningCard(
-    'Conte “1 e 2 e 3 e 4 e”. Os números marcam as batidas principais; o “e” ajuda a localizar toques no contratempo. Espere quatro pulsos de contagem e comece no primeiro tempo.',
-    Icons.lightbulb_outline,
-  );
-
-  Future<void> _openTheory() => showTheoryExplanationSheet(
-    context,
-    explanation: const TheoryExplanation(
-      objective:
-          'Reconhecer como as batidas e os silêncios organizam um ritmo.',
-      theory:
-          'Conte quatro pulsos regulares: 1, 2, 3, 4. As batidas podem cair no pulso ou entre eles; o silêncio também ocupa tempo. Ouça o padrão e acompanhe os pulsos antes de repetir.',
-    ),
-    theory:
-        'Conte quatro pulsos regulares: 1, 2, 3, 4. As batidas podem cair no pulso ou entre eles; o silêncio também ocupa tempo. Ouça o padrão e acompanhe os pulsos antes de repetir.',
-    onPlayExample: _playing || _recording || _saving ? null : _listen,
-    exampleLabel: 'Ouvir este ritmo novamente',
-  );
-
-  Widget get _resultCard => _learningCard(
-    '${_correct == true ? 'Boa! ' : 'Vamos ajustar o pulso. '}${_tapTimesMs.length} toques registrados para ${_target.length} batidas-alvo. Erro médio: ${_averageErrorMs!.round()} ms. ${_correct == true ? 'Você manteve o padrão dentro da tolerância deste nível.' : 'Ouça novamente e conte os contratempos antes de tocar.'}',
-    _correct == true ? Icons.check_circle_outline : Icons.school_outlined,
-  );
-
-  String get _instruction => switch (_level) {
-    1 => 'Comece sentindo quatro pulsos regulares. Toque junto com cada pulso.',
-    2 => 'Agora alguns sons caem entre os pulsos. Conte também o “e”.',
-    3 => 'Combine pulsos e contratempos; mantenha a subdivisão constante.',
-    4 => 'Observe os silêncios e retome no tempo certo.',
-    _ => 'Desafio misto: ouça, conte e repita o padrão no tempo.',
-  };
-
-  String _levelName(int level) => const [
-    'Pulso',
-    'Contratempo',
-    'Subdivisão',
-    'Silêncio',
-    'Desafio misto',
-  ][level - 1];
-
-  Widget _panel({required Widget child}) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFFFFF4E5), Color(0xFFEFE0CF)],
+  Widget _bpmControl() {
+    final locked = _result != null || _saving;
+    Widget step(int delta) => SizedBox(
+      width: 64,
+      height: 48,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
+        onPressed: locked ? null : () => _change(delta),
+        child: Text(delta > 0 ? '+$delta' : '$delta'),
       ),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: child,
-  );
-
-  Widget _learningCard(String text, IconData icon) => Container(
-    margin: const EdgeInsets.symmetric(vertical: 8),
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: _background),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(color: _background, height: 1.4),
+        Text(
+          '$_guess',
+          style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 72,
+            fontWeight: FontWeight.w800,
+            height: 1,
+          ),
+        ),
+        const Text('BPM', style: TextStyle(color: AppColors.muted)),
+        const SizedBox(height: 18),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            step(-5),
+            const SizedBox(width: 8),
+            step(-1),
+            const SizedBox(width: 20),
+            step(1),
+            const SizedBox(width: 8),
+            step(5),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Slider(
+            value: _guess.toDouble(),
+            min: TempoRules.minBpm.toDouble(),
+            max: TempoRules.maxBpm.toDouble(),
+            onChanged: locked
+                ? null
+                : (value) => setState(() => _guess = value.round()),
           ),
         ),
       ],
-    ),
-  );
+    );
+  }
 
-  int _number(dynamic value) => value is num ? value.toInt() : 0;
+  Widget _resultView() {
+    final result = _result!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          Text(
+            'Era ${result.target} · você marcou ${result.guess}',
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ExerciseFeedbackLine(
+            '${result.description} ${'★' * result.stars}'.trim(),
+            positive: result.correct,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actions() {
+    if (_result != null) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: FilledButton(
+          onPressed: _saving ? null : _next,
+          child: const Text('Próximo'),
+        ),
+      );
+    }
+    final busy = _playing != _Playing.none || _saving;
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: FilledButton.tonalIcon(
+                  onPressed: busy ? null : _listenTarget,
+                  icon: Icon(
+                    _playing == _Playing.target
+                        ? Icons.graphic_eq_rounded
+                        : Icons.volume_up_rounded,
+                  ),
+                  label: const Text('Ouvir o original'),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: OutlinedButton.icon(
+                  onPressed: busy ? null : _listenGuess,
+                  icon: Icon(
+                    _playing == _Playing.guess
+                        ? Icons.graphic_eq_rounded
+                        : Icons.hearing_rounded,
+                  ),
+                  label: const Text('Ouvir o meu'),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton(
+            onPressed: busy || !_heardTarget ? null : _confirm,
+            child: const Text('Confirmar'),
+          ),
+        ),
+      ],
+    );
+  }
 }
