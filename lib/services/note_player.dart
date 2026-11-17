@@ -1,40 +1,39 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter_soloud/flutter_soloud.dart';
 
 import 'audio_engine.dart';
+import 'note_synth.dart';
 
 enum NoteInstrument { piano, guitar }
 
 const standardGuitarOpenMidis = [64, 59, 55, 50, 45, 40];
 
-/// Sintetiza notas MIDI com parciais via SoLoud, sem samples instrumentais.
+/// Toca notas sintetizadas no app (sem samples) para os exercícios auditivos.
+///
+/// Cada nota ou acorde é gerado inteiro em memória por [NoteSynth] (WAV PCM
+/// 16 bits, 44,1 kHz), carregado com `SoLoud.loadMem` e guardado em cache por
+/// (notas, duração, instrumento). Assim cada som é uma única voz, que já começa
+/// na frequência exata: nada de deslizar até a nota, estalos ou parciais fora
+/// de sincronia.
 class NotePlayer {
   NotePlayer._();
 
   static final NotePlayer instance = NotePlayer._();
 
-  static const int _attackMs = 5;
-  static const int _releaseMs = 300;
-  static const double _maxGain = 0.55;
+  static const int _stopFadeMs = 40;
+
   final SoLoud _engine = SoLoud.instance;
-  final Map<(int, NoteInstrument, int, WaveForm), Future<AudioSource>>
-  _sources = {};
+  final Map<String, Future<AudioSource>> _sources = {};
   final Set<SoundHandle> _playing = {};
-  final Set<SoundHandle> _releasing = {};
-  final Map<SoundHandle, double> _peakVolumes = {};
+
   Future<void> initialize() => AudioEngine.ensureInitialized();
 
   Future<void> playNote(
     int midi, {
     NoteInstrument instrument = NoteInstrument.piano,
     int durationMs = 700,
-  }) async {
-    final handles = await _start(midi, instrument, 1);
-    await Future<void>.delayed(Duration(milliseconds: durationMs));
-    await _release(handles);
-  }
+  }) => _play([midi], instrument, durationMs);
 
   Future<void> playChord(
     List<int> midis, {
@@ -42,14 +41,7 @@ class NotePlayer {
     int durationMs = 700,
   }) async {
     if (midis.isEmpty) return;
-    final handles = <SoundHandle>[];
-    // Dividing by the number of notes bounds the sum even for four-note chords.
-    final chordGain = 1 / midis.length;
-    for (final midi in midis) {
-      handles.addAll(await _start(midi, instrument, chordGain));
-    }
-    await Future<void>.delayed(Duration(milliseconds: durationMs));
-    await _release(handles);
+    await _play(midis, instrument, durationMs);
   }
 
   Future<void> playSequence(
@@ -64,99 +56,64 @@ class NotePlayer {
     }
   }
 
-  /// Starts a sustained note for touch and computer-keyboard instruments.
-  Future<List<SoundHandle>> startNote(
-    int midi, {
-    NoteInstrument instrument = NoteInstrument.piano,
-  }) => _start(midi, instrument, 1);
-
-  Future<void> stopNote(List<SoundHandle> handles) => _release(handles);
-
-  Future<void> stopAll() async => _release(_playing.toList());
-
-  Future<List<SoundHandle>> _start(
-    int midi,
-    NoteInstrument instrument,
-    double chordGain,
-  ) async {
-    if (midi < 0 || midi > 127) throw RangeError.range(midi, 0, 127, 'midi');
-    await initialize();
-    final partials = instrument == NoteInstrument.piano
-        ? const [
-            (1, WaveForm.sin, 1.0),
-            (2, WaveForm.sin, 0.55),
-            (3, WaveForm.sin, 0.25),
-            (4, WaveForm.sin, 0.10),
-          ]
-        : const [(1, WaveForm.triangle, 1.0), (2, WaveForm.sin, 0.40)];
-    final totalWeight = partials.fold<double>(
-      0,
-      (total, partial) => total + partial.$3,
-    );
-    final handles = <SoundHandle>[];
-    for (final partial in partials) {
-      final source = await _source(midi, instrument, partial.$1, partial.$2);
-      final peak = _maxGain * chordGain * partial.$3 / totalWeight;
-      final handle = await _engine.play(source, volume: 0, looping: true);
-      _engine.fadeVolume(handle, peak, const Duration(milliseconds: _attackMs));
-      _playing.add(handle);
-      _peakVolumes[handle] = peak;
-      handles.add(handle);
-    }
-    unawaited(_decay(handles, instrument));
-    return handles;
-  }
-
-  Future<AudioSource> _source(
-    int midi,
-    NoteInstrument instrument,
-    int harmonic,
-    WaveForm waveform,
-  ) => _sources.putIfAbsent((midi, instrument, harmonic, waveform), () async {
-    final source = await _engine.loadWaveform(waveform, false, 1, 0);
-    final fundamental = 440 * math.pow(2, (midi - 69) / 12);
-    _engine.setWaveformFreq(source, (fundamental * harmonic).toDouble());
-    return source;
-  });
-
-  Future<void> _decay(
-    List<SoundHandle> handles,
-    NoteInstrument instrument,
-  ) async {
-    await Future<void>.delayed(const Duration(milliseconds: _attackMs));
-    final decayMs = instrument == NoteInstrument.piano ? 800 : 500;
-    final sustain = instrument == NoteInstrument.piano ? 0.35 : 0.20;
+  /// Interrompe tudo com um fade curto, para não estalar.
+  Future<void> stopAll() async {
+    if (!_engine.isInitialized) return;
+    final handles = _playing.toList();
+    _playing.clear();
     for (final handle in handles) {
-      final peak = _peakVolumes[handle];
-      if (peak != null &&
-          _playing.contains(handle) &&
-          !_releasing.contains(handle) &&
-          _engine.getIsValidVoiceHandle(handle)) {
+      if (_engine.getIsValidVoiceHandle(handle)) {
         _engine.fadeVolume(
           handle,
-          peak * sustain,
-          Duration(milliseconds: decayMs),
+          0,
+          const Duration(milliseconds: _stopFadeMs),
+        );
+        _engine.scheduleStop(
+          handle,
+          const Duration(milliseconds: _stopFadeMs + 10),
         );
       }
     }
   }
 
-  Future<void> _release(Iterable<SoundHandle> handles) async {
-    final active = handles.where(_playing.contains).toList();
-    for (final handle in active) {
-      _releasing.add(handle);
-      if (_engine.getIsValidVoiceHandle(handle)) {
-        _engine.fadeVolume(handle, 0, const Duration(milliseconds: _releaseMs));
+  /// Toca o som e só retorna quando ele termina (sustentação + release),
+  /// mantendo o mesmo ritmo que as telas já usavam.
+  Future<void> _play(
+    List<int> midis,
+    NoteInstrument instrument,
+    int durationMs,
+  ) async {
+    await initialize();
+    final source = await _source(midis, instrument, durationMs);
+    final handle = await _engine.play(source);
+    _playing.add(handle);
+    await Future<void>.delayed(
+      Duration(milliseconds: NoteSynth.totalMs(durationMs)),
+    );
+    _playing.remove(handle);
+  }
+
+  Future<AudioSource> _source(
+    List<int> midis,
+    NoteInstrument instrument,
+    int durationMs,
+  ) {
+    final key = '${instrument.name}_${midis.join('-')}_$durationMs';
+    return _sources.putIfAbsent(key, () async {
+      try {
+        final timbre = instrument == NoteInstrument.piano
+            ? SynthTimbre.piano
+            : SynthTimbre.guitar;
+        final wav = NoteSynth.renderChord(
+          midis,
+          durationMs: durationMs,
+          timbre: timbre,
+        );
+        return await _engine.loadMem('melodyhub_synth_$key.wav', wav);
+      } catch (_) {
+        _sources.remove(key);
+        rethrow;
       }
-    }
-    if (active.isNotEmpty) {
-      await Future<void>.delayed(const Duration(milliseconds: _releaseMs));
-    }
-    for (final handle in active) {
-      if (_engine.getIsValidVoiceHandle(handle)) await _engine.stop(handle);
-      _playing.remove(handle);
-      _releasing.remove(handle);
-      _peakVolumes.remove(handle);
-    }
+    });
   }
 }

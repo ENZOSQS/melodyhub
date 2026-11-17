@@ -39,7 +39,8 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   int _attempts = 0;
   int _targetMidi = 60;
   int? _selectedMidi;
-  int? _highlightMidi;
+  List<int> _resolution = const [];
+  int _resolutionStep = -1;
   int? _shakingMidi;
   int _shakeToken = 0;
   String _noteType = 'solfejo';
@@ -131,11 +132,11 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   }
 
   void _newTarget() {
-    final candidates = NoteIdentificationRules.notesForLevel(_level);
-    _targetMidi = candidates[_random.nextInt(candidates.length)];
+    _targetMidi = NoteIdentificationRules.drawTarget(_level, _random);
     _attempts = 0;
     _selectedMidi = null;
-    _highlightMidi = null;
+    _resolution = const [];
+    _resolutionStep = -1;
     _shakingMidi = null;
     _revealed = false;
     _wrongMidis.clear();
@@ -155,8 +156,12 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     _questionTimer.stop();
     setState(() => _playing = true);
     try {
-      if (withContext) await _playCadence();
-      await _notePlayer.playNote(_targetMidi, durationMs: 520);
+      if (withContext) {
+        await _playCadence();
+        // Pausa curta para separar a cadência da nota misteriosa.
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+      }
+      await _notePlayer.playNote(_targetMidi, durationMs: 650);
     } catch (error) {
       debugPrint('Falha ao tocar a questão: $error');
       if (mounted) {
@@ -175,8 +180,8 @@ class _ExercisesScreenState extends State<ExercisesScreen>
   Future<void> _playCadence() async {
     for (final chord in NoteIdentificationRules.cadenceChords) {
       if (!mounted || !_inForeground) return;
-      // The 200 ms sustain plus the 300 ms release makes each chord about 0.5 s.
-      await _notePlayer.playChord(chord, durationMs: 200);
+      // 320 ms de sustentação + 300 ms de release: cerca de 0,6 s por acorde.
+      await _notePlayer.playChord(chord, durationMs: 320);
     }
   }
 
@@ -190,10 +195,14 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     }
     _questionTimer.stop();
     _attempts++;
-    if (midi == _targetMidi) {
+    final outcome = NoteIdentificationRules.evaluate(
+      target: _targetMidi,
+      selected: midi,
+      attempt: _attempts,
+    );
+    if (outcome == NoteAnswerOutcome.correct) {
       setState(() {
         _selectedMidi = midi;
-        _highlightMidi = midi;
         _saving = true;
         _pendingAdvance = true;
       });
@@ -202,7 +211,6 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       if (!saved) {
         setState(() {
           _selectedMidi = null;
-          _highlightMidi = null;
           _pendingAdvance = false;
         });
         _questionTimer.start();
@@ -215,7 +223,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
     _wrongMidis.add(midi);
     _shakeToken++;
-    if (_attempts < 3) {
+    if (outcome == NoteAnswerOutcome.tryAgain) {
       setState(() {
         _shakingMidi = midi;
         _playing = true;
@@ -244,7 +252,6 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
     setState(() {
       _selectedMidi = midi;
-      _highlightMidi = _targetMidi;
       _revealed = true;
       _saving = true;
       _playing = true;
@@ -258,41 +265,40 @@ class _ExercisesScreenState extends State<ExercisesScreen>
       if (mounted && saved) {
         await _advanceAfterFeedback();
       } else if (mounted) {
-        setState(() {
-          _selectedMidi = null;
-          _highlightMidi = null;
-          _revealed = false;
-          _wrongMidis.clear();
-          _attempts = 0;
-          _pendingAdvance = false;
-        });
-        _questionTimer.start();
+        _resetQuestionAfterFailure();
       }
     } catch (error) {
-      if (mounted) {
-        setState(() {
-          _playing = false;
-          _selectedMidi = null;
-          _highlightMidi = null;
-          _revealed = false;
-          _wrongMidis.clear();
-          _attempts = 0;
-          _pendingAdvance = false;
-        });
-        _questionTimer.start();
-      }
+      if (mounted) _resetQuestionAfterFailure();
       debugPrint('Falha ao tocar a resposta e resolução: $error');
     } finally {
       if (mounted) setState(() => _playing = false);
     }
   }
 
+  /// Se salvar falhar, a mesma questão volta do zero.
+  void _resetQuestionAfterFailure() {
+    setState(() {
+      _playing = false;
+      _selectedMidi = null;
+      _revealed = false;
+      _wrongMidis.clear();
+      _attempts = 0;
+      _pendingAdvance = false;
+      _resolution = const [];
+      _resolutionStep = -1;
+    });
+    _questionTimer.start();
+  }
+
   Future<void> _playResolution() async {
+    // A resolução aparece só como texto ("Mi → Ré → Dó"); os botões não
+    // mudam, para não parecer que o app está respondendo sozinho.
     final resolution = NoteIdentificationRules.resolutionFor(_targetMidi);
-    for (final midi in resolution) {
+    setState(() => _resolution = resolution);
+    for (var step = 0; step < resolution.length; step++) {
       if (!mounted || !_inForeground) break;
-      setState(() => _highlightMidi = midi);
-      await _notePlayer.playNote(midi, durationMs: 300);
+      setState(() => _resolutionStep = step);
+      await _notePlayer.playNote(resolution[step], durationMs: 300);
     }
   }
 
@@ -392,14 +398,20 @@ class _ExercisesScreenState extends State<ExercisesScreen>
 
   int _number(dynamic value) => value is num ? value.toInt() : 0;
 
-  Color _optionColor(int midi) {
-    if (_selectedMidi != null && midi == _highlightMidi) {
-      return _revealed ? const Color(0xFF55A86A) : const Color(0xFF367F50);
-    }
-    if (_wrongMidis.contains(midi)) return const Color(0xFF6A343B);
-    if (midi % 12 == 0) return AppColors.primary;
-    return AppColors.surfaceRaised;
-  }
+  NoteButtonState _buttonState(int midi) => NoteIdentificationRules.buttonState(
+    midi: midi,
+    target: _targetMidi,
+    wrongMidis: _wrongMidis,
+    finished: _selectedMidi != null,
+    revealed: _revealed,
+  );
+
+  Color _optionColor(NoteButtonState state) => switch (state) {
+    NoteButtonState.correct => const Color(0xFF367F50),
+    NoteButtonState.revealed => const Color(0xFF55A86A),
+    NoteButtonState.wrong => const Color(0xFF6A343B),
+    NoteButtonState.idle => AppColors.surfaceRaised,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -550,19 +562,7 @@ class _ExercisesScreenState extends State<ExercisesScreen>
                       ),
                     ),
                   ),
-                  if (_selectedMidi != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        _revealed
-                            ? 'A resposta era ${_label(_targetMidi)}'
-                            : 'Muito bem! ${_label(_targetMidi)}',
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                  if (_selectedMidi != null) _feedback(),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
                     child: Wrap(
@@ -578,8 +578,55 @@ class _ExercisesScreenState extends State<ExercisesScreen>
     );
   }
 
+  Widget _feedback() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Column(
+        children: [
+          Text(
+            _revealed
+                ? 'A resposta era ${_label(_targetMidi)}'
+                : 'Muito bem! ${_label(_targetMidi)}',
+            style: const TextStyle(
+              color: AppColors.text,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (_resolution.length > 1) ...[
+            const SizedBox(height: 4),
+            Text.rich(
+              TextSpan(
+                children: [
+                  for (var i = 0; i < _resolution.length; i++) ...[
+                    if (i > 0) const TextSpan(text: ' → '),
+                    TextSpan(
+                      text: _label(_resolution[i]),
+                      style: TextStyle(
+                        color: i == _resolutionStep
+                            ? AppColors.primary
+                            : AppColors.muted,
+                        fontWeight: i == _resolutionStep
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _answerButton(int midi) {
-    final color = _optionColor(midi);
+    final state = _buttonState(midi);
+    final color = _optionColor(state);
+    final isTonic = midi % 12 == 0;
+
     final isDisabled =
         _playing ||
         _saving ||
@@ -603,22 +650,26 @@ class _ExercisesScreenState extends State<ExercisesScreen>
           height: diameter,
           child: Material(
             color: color,
-            shape: const CircleBorder(),
+            // O Dó (tônica) é marcado só pela borda, para não parecer
+            // uma resposta já escolhida.
+            shape: CircleBorder(
+              side: isTonic && state == NoteButtonState.idle
+                  ? const BorderSide(color: AppColors.primary, width: 2)
+                  : BorderSide.none,
+            ),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: isDisabled ? null : () => _answer(midi),
               child: Center(
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 150),
-                  opacity: _wrongMidis.contains(midi) ? 0.28 : 1,
+                  opacity: state == NoteButtonState.wrong ? 0.28 : 1,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       label,
                       style: TextStyle(
-                        color: color == AppColors.primary
-                            ? AppColors.background
-                            : AppColors.text,
+                        color: AppColors.text,
                         fontWeight: FontWeight.w800,
                         fontSize: _level == 5 ? 13 : 16,
                       ),
