@@ -30,7 +30,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _salvando = false;
   bool _rotulosTeclado = true;
   bool _lembreteAtivo = false;
-  int _bpm = 80;
   String _tipoNota = 'solfejo';
   TimeOfDay _horaLembrete = const TimeOfDay(hour: 19, minute: 0);
   List<int> _diasLembrete = List<int>.generate(7, (index) => index + 1);
@@ -51,20 +50,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await Future.wait([
       AppPreferences.noteType(),
       AppPreferences.showKeyboardLabels(),
-      AppPreferences.defaultBpm(),
       AppPreferences.reminderEnabled(),
       AppPreferences.reminderTime(),
       AppPreferences.reminderDays(),
     ]);
     if (!mounted) return;
-    final time = result[4] as ({int hour, int minute});
+    final time = result[3] as ({int hour, int minute});
     setState(() {
       _tipoNota = result[0] as String;
       _rotulosTeclado = result[1] as bool;
-      _bpm = result[2] as int;
-      _lembreteAtivo = result[3] as bool;
+      _lembreteAtivo = result[2] as bool;
       _horaLembrete = TimeOfDay(hour: time.hour, minute: time.minute);
-      _diasLembrete = result[5] as List<int>;
+      _diasLembrete = result[4] as List<int>;
     });
   }
 
@@ -315,16 +312,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final acertos = _numero(dados['acertos']);
 
-          final erros = _numero(dados['erros']);
-
-          final sequencia = _numero(dados['melhorSequencia']);
-
           final melhorSequenciaDias = _numero(dados['melhorSequenciaDias']);
           final precisao = exercicios == 0
               ? 0
               : (acertos * 100 / exercicios).round();
 
-          final conquistas = List<String>.from(dados['conquistas'] ?? []);
           final iconePerfilId = dados['iconePerfilId'] as String?;
           final fotoUrl = dados['fotoUrl'] as String? ?? usuario.photoURL;
 
@@ -436,14 +428,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 16),
                       _buildDesempenho(
                         xp,
-                        nivel,
                         exercicios,
-                        acertos,
-                        erros,
-                        sequencia,
                         melhorSequenciaDias,
                         precisao,
-                        conquistas.length,
                       ),
                       const SizedBox(height: 22),
                       SizedBox(
@@ -484,15 +471,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ),
   );
 
-  Widget _buildSobreSons() => Card(
-    color: AppColors.surface,
-    child: const ListTile(
-      leading: Icon(Icons.music_note, color: verde),
-      title: Text('Sobre os sons'),
-      subtitle: Text(
-        'Simuladores: samples Tone.js Instruments (CC BY 3.0). '
-        'Exercícios auditivos: som sintetizado no próprio app.',
-      ),
+  Widget _buildSobreSons() => MhCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _titulo('Sobre os sons'),
+        const SizedBox(height: 8),
+        const Text(
+          'Simuladores: samples Tone.js Instruments (CC BY 3.0). '
+          'Exercícios auditivos: som sintetizado no próprio app.',
+          style: TextStyle(color: AppColors.muted, height: 1.4),
+        ),
+      ],
     ),
   );
 
@@ -710,22 +700,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             AppPreferences.setShowKeyboardLabels(value);
           },
         ),
-        Text(
-          'BPM inicial dos exercícios de ritmo: $_bpm',
-          style: const TextStyle(color: AppColors.text),
-        ),
-        Slider(
-          value: _bpm.toDouble(),
-          min: 40,
-          max: 180,
-          divisions: 28,
-          label: '$_bpm BPM',
-          onChanged: (value) {
-            final bpm = value.round();
-            setState(() => _bpm = bpm);
-            AppPreferences.setDefaultBpm(bpm);
-          },
-        ),
       ],
     ),
   );
@@ -801,53 +775,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildDesempenho(
     int xp,
-    int nivel,
     int exercicios,
-    int acertos,
-    int erros,
-    int sequencia,
     int melhorSequenciaDias,
     int precisao,
-    int conquistas,
   ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return MhCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Desempenho',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          _titulo('Desempenho'),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(child: _card(Icons.star, 'XP', '$xp')),
               const SizedBox(width: 8),
-              Expanded(child: _card(Icons.trending_up, 'Nível', '$nivel')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
               Expanded(child: _card(Icons.quiz, 'Exercícios', '$exercicios')),
-              const SizedBox(width: 8),
-              Expanded(child: _card(Icons.check_circle, 'Acertos', '$acertos')),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _card(Icons.cancel, 'Erros', '$erros')),
+              Expanded(
+                child: _card(Icons.track_changes, 'Precisão', '$precisao%'),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: _card(
@@ -858,12 +808,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          _card(Icons.track_changes, 'Precisão geral', '$precisao%'),
-          const SizedBox(height: 8),
-          _card(Icons.bolt, 'Acertos consecutivos', '$sequencia'),
-          const SizedBox(height: 8),
-          _card(Icons.emoji_events, 'Conquistas', '$conquistas'),
         ],
       ),
     );

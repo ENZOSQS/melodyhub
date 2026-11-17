@@ -146,7 +146,7 @@ class _HomePageState extends State<HomePage> {
                       _opcao(
                         icone: Icons.piano_outlined,
                         titulo: 'Identificar a nota',
-                        descricao: 'Notas e memória auditiva em etapas.',
+                        descricao: 'Ouça e reconheça as notas de Dó maior.',
                         destino: const LearningPathScreen(
                           track: LearningTrack.pratica,
                         ),
@@ -155,19 +155,19 @@ class _HomePageState extends State<HomePage> {
                         icone: Icons.storefront_outlined,
                         titulo: 'Loja de ícones · $pontos pontos',
                         descricao:
-                            'Acumule pontos nos exercícios e personalize seu perfil.',
+                            'Troque seus pontos por ícones para o perfil.',
                         destino: const IconShopScreen(),
                       ),
                       _opcao(
                         icone: Icons.emoji_events_outlined,
                         titulo: 'Conquistas (${conquistas.length})',
-                        descricao: 'Veja as medalhas que você já desbloqueou.',
+                        descricao: 'Medalhas que você já desbloqueou.',
                         destino: const AchievementsScreen(),
                       ),
                       _opcao(
                         icone: Icons.history_rounded,
                         titulo: 'Histórico',
-                        descricao: 'Revise suas respostas e a duração de cada uma.',
+                        descricao: 'Suas respostas e o tempo de cada uma.',
                         destino: const HistoryScreen(),
                       ),
                       _opcao(

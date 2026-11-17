@@ -160,7 +160,7 @@ class PerformanceScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '$total exercícios · $acertos acertos. O tempo soma só o período respondendo exercícios.',
+                      '$total exercícios · $acertos acertos · tempo só das respostas',
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,
@@ -198,7 +198,7 @@ class PerformanceScreen extends StatelessWidget {
                     if (itensCriticos.isEmpty)
                       const MhCard(
                         child: Text(
-                          'Ainda não há itens com dois ou mais erros nos últimos sete dias. Continue praticando para identificar o que merece revisão.',
+                          'Nada com dois ou mais erros nesta semana. Bom sinal!',
                           style: TextStyle(color: AppColors.muted, height: 1.4),
                         ),
                       ),
@@ -263,7 +263,7 @@ class PerformanceScreen extends StatelessWidget {
                     if (sugestoes.isEmpty)
                       const MhCard(
                         child: Text(
-                          'Nenhuma habilidade precisa de reforço com os dados atuais. Abaixo de três respostas, ainda é cedo para apontar uma dificuldade.',
+                          'Nenhuma habilidade precisa de reforço agora. Com menos de três respostas, ainda é cedo para dizer.',
                           style: TextStyle(color: AppColors.muted, height: 1.4),
                         ),
                       ),
