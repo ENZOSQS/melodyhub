@@ -29,6 +29,7 @@ ResultadoExercicio aplicarExercicio({
   required bool acertou,
   required String tipo,
   int? dificuldade,
+  int? estrelas,
   required DateTime agora,
 }) {
   final total = _numero(dados['exerciciosRespondidos']) + 1;
@@ -37,9 +38,7 @@ ResultadoExercicio aplicarExercicio({
   final xpGanho = XpCalculator.calculateXp(acertou);
   final xp = _numero(dados['xp']) + xpGanho;
   final nivel = calcularNivel(xp);
-  final pontosGanhos = acertou
-      ? 8 + 2 * (dificuldade ?? 1).clamp(1, 5).toInt()
-      : 5;
+  final pontosGanhos = pontosPorResposta(acertou: acertou, estrelas: estrelas);
   final pontos = _numero(dados['pontos']) + pontosGanhos;
 
   final sequenciaRespostas = acertou ? _numero(dados['sequenciaAtual']) + 1 : 0;
@@ -290,6 +289,20 @@ ResultadoExercicio aplicarExercicio({
         .where((conquista) => !conquistasAtuais.contains(conquista))
         .toList(),
   );
+}
+
+/// Pontos (moeda da loja) de uma resposta. O XP não muda com isto.
+///
+/// Com estrelas: ★★★ = 10, ★★ = 6, ★ = 3 e resposta revelada (0) = 1.
+/// Sem estrelas (exercícios de tentativa única): acerto 8, erro 1.
+int pontosPorResposta({required bool acertou, int? estrelas}) {
+  if (estrelas == null) return acertou ? 8 : 1;
+  return switch (estrelas.clamp(0, 3)) {
+    3 => 10,
+    2 => 6,
+    1 => 3,
+    _ => 1,
+  };
 }
 
 int calcularNivel(int xp) {

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../data/profile_icon_rewards.dart';
+import '../domain/shop_rules.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 
@@ -134,14 +135,17 @@ class _IconShopScreenState extends State<IconShopScreen>
                         achievements.contains(item.achievementId)),
               )
               .toList();
-          final available = profileIconRewards
-              .where(
-                (item) =>
-                    !owned.contains(item.id) &&
-                    (item.achievementId == null ||
-                        !achievements.contains(item.achievementId)),
-              )
-              .toList();
+          final available =
+              profileIconRewards
+                  .where(
+                    (item) =>
+                        !owned.contains(item.id) &&
+                        (item.achievementId == null ||
+                            !achievements.contains(item.achievementId)),
+                  )
+                  .toList()
+                // Do mais barato ao mais caro: o próximo objetivo aparece primeiro.
+                ..sort((a, b) => a.price.compareTo(b.price));
 
           return Column(
             children: [
@@ -160,6 +164,7 @@ class _IconShopScreenState extends State<IconShopScreen>
                             available,
                             mode: _GridMode.shop,
                             equippedId: equippedId,
+                            points: points,
                           ),
                     collection.isEmpty
                         ? _emptyState(
@@ -177,6 +182,7 @@ class _IconShopScreenState extends State<IconShopScreen>
                             collection,
                             mode: _GridMode.collection,
                             equippedId: equippedId,
+                            points: points,
                           ),
                   ],
                 ),
@@ -284,6 +290,7 @@ class _IconShopScreenState extends State<IconShopScreen>
     List<ProfileIconReward> items, {
     required _GridMode mode,
     required String? equippedId,
+    required int points,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -304,7 +311,7 @@ class _IconShopScreenState extends State<IconShopScreen>
           itemBuilder: (context, index) {
             final item = items[index];
             return mode == _GridMode.shop
-                ? _shopCard(item, busy: _buying == item.id)
+                ? _shopCard(item, busy: _buying == item.id, points: points)
                 : _collectionCard(
                     item,
                     isEquipped: equippedId == item.id,
@@ -316,7 +323,13 @@ class _IconShopScreenState extends State<IconShopScreen>
     );
   }
 
-  Widget _shopCard(ProfileIconReward item, {required bool busy}) {
+  Widget _shopCard(
+    ProfileIconReward item, {
+    required bool busy,
+    required int points,
+  }) {
+    final missing = ShopRules.pontosFaltando(points, item.price);
+    final canBuy = missing == 0;
     return _itemCardFrame(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,6 +347,22 @@ class _IconShopScreenState extends State<IconShopScreen>
             style: const TextStyle(color: AppColors.muted, fontSize: 11),
           ),
           const Spacer(),
+          if (!canBuy) ...[
+            Text(
+              'Faltam $missing pts',
+              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+            ),
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: LinearProgressIndicator(
+                value: points / item.price,
+                minHeight: 5,
+                backgroundColor: AppColors.surfaceHighlight,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           Row(
             children: [
               Expanded(
@@ -347,7 +376,7 @@ class _IconShopScreenState extends State<IconShopScreen>
                 ),
               ),
               FilledButton(
-                onPressed: busy ? null : () => _buy(item),
+                onPressed: busy || !canBuy ? null : () => _buy(item),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(88, 40),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -513,11 +542,9 @@ class _IconShopScreenState extends State<IconShopScreen>
 
   Widget _rarityBadge(String rarity) {
     final color = switch (rarity) {
-      'Lendário' => AppColors.secondary,
-      'Épico' => const Color(0xFFD6A0B2),
-      'Raro' => const Color(0xFFD6A0B2),
-      'Incomum' => const Color(0xFFD2A45E),
-      _ => AppColors.muted,
+      ShopRules.epico => AppColors.secondary,
+      ShopRules.raro => const Color(0xFFD6A0B2),
+      _ => const Color(0xFFD2A45E),
     };
     return _statusBadge(rarity, color);
   }

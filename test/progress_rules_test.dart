@@ -23,17 +23,60 @@ Map<String, dynamic> _rodada({
 }
 
 void main() {
-  test('XP, pontos e limites de nível', () {
+  test('pontos por estrelas não dependem do nível', () {
     for (var dificuldade = 1; dificuldade <= 5; dificuldade++) {
       final r = aplicarExercicio(
         dados: {},
         acertou: true,
         tipo: 'Prático',
         dificuldade: dificuldade,
+        estrelas: 3,
         agora: _hoje,
       );
-      expect(r.xpGanho, 10);
-      expect(r.pontosGanhos, 8 + 2 * dificuldade);
+      expect(r.pontosGanhos, 10);
+    }
+    expect(pontosPorResposta(acertou: true, estrelas: 3), 10);
+    expect(pontosPorResposta(acertou: true, estrelas: 2), 6);
+    expect(pontosPorResposta(acertou: false, estrelas: 1), 3);
+    expect(pontosPorResposta(acertou: false, estrelas: 0), 1);
+  });
+
+  test('sem estrelas: acerto vale 8 e erro vale 1', () {
+    expect(pontosPorResposta(acertou: true), 8);
+    expect(pontosPorResposta(acertou: false), 1);
+    final teoria = aplicarExercicio(
+      dados: {'pontos': 40},
+      acertou: false,
+      tipo: 'Teórico',
+      agora: _hoje,
+    );
+    expect(teoria.pontosGanhos, 1);
+    expect(teoria.camposPerfil['pontos'], 41);
+  });
+
+  test('BPM usa as estrelas calculadas pelo exercício', () {
+    final perto = aplicarExercicio(
+      dados: {},
+      acertou: false,
+      tipo: 'Ritmo',
+      dificuldade: 3,
+      estrelas: 1,
+      agora: _hoje,
+    );
+    expect(perto.pontosGanhos, 3);
+    expect(perto.xpGanho, 0);
+  });
+
+  test('XP e limites de nível do aluno', () {
+    for (final estrelas in [null, 0, 1, 2, 3]) {
+      final acerto = aplicarExercicio(
+        dados: {},
+        acertou: true,
+        tipo: 'Prático',
+        estrelas: estrelas,
+        agora: _hoje,
+      );
+      expect(acerto.xpGanho, 10);
     }
     final erro = aplicarExercicio(
       dados: {},
@@ -42,7 +85,6 @@ void main() {
       agora: _hoje,
     );
     expect(erro.xpGanho, 0);
-    expect(erro.pontosGanhos, 5);
     for (final caso in {
       99: 1,
       100: 2,
@@ -124,10 +166,7 @@ void main() {
         nivel: 1,
         campoNivel: 'unused',
       );
-      final chave = {
-        'Ritmo': 'ritmo',
-        'Escala': 'escalas',
-      }[tipo]!;
+      final chave = {'Ritmo': 'ritmo', 'Escala': 'escalas'}[tipo]!;
       final habilidade = (dados['habilidadesEtapas'] as Map)[chave] as Map;
       expect(habilidade['nivel'], 2);
       expect(habilidade['1']['concluida'], isTrue);

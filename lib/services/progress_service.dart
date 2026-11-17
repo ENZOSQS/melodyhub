@@ -162,6 +162,7 @@ class ProgressService {
         acertou: acertou,
         tipo: tipo,
         dificuldade: dificuldade,
+        estrelas: estrelas,
         agora: agora,
       );
       transaction.set(referencia, {
