@@ -29,8 +29,10 @@ class IntervalExercisesScreen extends StatefulWidget {
 
 class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     with WidgetsBindingObserver {
-  static const _noteMs = 650;
-  static const _gapMs = 120;
+  // Cada nota dura 600 ms + 300 ms de release. A segunda nota entra logo
+  // depois do release, então o salto fica claro sem pausa morta.
+  static const _noteMs = 600;
+  static const _gapMs = 40;
 
   final _notePlayer = NotePlayer.instance;
   final _progress = ProgressService();
@@ -48,6 +50,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   int _attempts = 0;
   int _shakeToken = 0;
   int? _shaking;
+  int? _introPlaying;
 
   bool _loading = true;
   bool _intro = true;
@@ -127,7 +130,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
   }
 
   int _roundFrom(Map<String, dynamic> data, int level, int currentLevel) {
-    if (level == currentLevel) return _number(data['tentativasIntervalosNivel']);
+    if (level == currentLevel) {
+      return _number(data['tentativasIntervalosNivel']);
+    }
     final stages = Map<String, dynamic>.from(
       data['intervaloEtapas'] as Map? ?? const <String, dynamic>{},
     );
@@ -246,7 +251,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       _shaking = choice;
       _feedback = _level == 1
           ? 'Ouça de novo: o som ${_ascending ? 'sobe' : 'desce'}?'
-          : 'Você escolheu ${EarTrainingLevels.intervalName(choice)}. Ouça a diferença.';
+          : 'Primeiro a sua escolha (${EarTrainingLevels.intervalName(choice)}), depois o da pergunta.';
       _feedbackPositive = false;
     });
     await _guarded(() async {
@@ -264,7 +269,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       : EarTrainingLevels.intervalName(_semitones);
 
   String _songLine() {
-    if (_level == 1) return '';
+    // As músicas de referência são todas ascendentes: num intervalo que desce
+    // elas confundem mais do que ajudam.
+    if (_level == 1 || !_ascending) return '';
     final song = intervalTheory[_semitones]?.song;
     return song == null ? '' : 'Lembra: $song.';
   }
@@ -376,6 +383,12 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
     if (!_intro) await _playQuestion();
   }
 
+  Future<void> _playIntro(int semitones) async {
+    setState(() => _introPlaying = semitones);
+    await _guarded(() => _playInterval(60, semitones, true));
+    if (mounted) setState(() => _introPlaying = null);
+  }
+
   void _startAfterIntro() {
     setState(() => _intro = false);
     unawaited(_playQuestion());
@@ -451,7 +464,9 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
       const SizedBox(height: 8),
       ExerciseQuestion(
         'Conheça os sons',
-        subtitle: 'Nível $_level · toque para ouvir cada intervalo',
+        subtitle: _level == 5
+            ? 'Toque para ouvir. No nível 5 eles também descem.'
+            : 'Toque em cada cartão para ouvir',
       ),
       const SizedBox(height: 12),
       Expanded(
@@ -466,11 +481,7 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                   borderRadius: BorderRadius.circular(18),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(18),
-                    onTap: _playing
-                        ? null
-                        : () => _guarded(
-                            () => _playInterval(60, semitones, true),
-                          ),
+                    onTap: _playing ? null : () => _playIntro(semitones),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
                       child: Row(
@@ -500,8 +511,10 @@ class _IntervalExercisesScreenState extends State<IntervalExercisesScreen>
                               ],
                             ),
                           ),
-                          const Icon(
-                            Icons.play_circle_fill_rounded,
+                          Icon(
+                            _introPlaying == semitones
+                                ? Icons.graphic_eq_rounded
+                                : Icons.play_circle_fill_rounded,
                             color: AppColors.primary,
                             size: 38,
                           ),
